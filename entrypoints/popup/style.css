@@ -1,0 +1,16 @@
+.popup {
+  min-height: 100%;
+  background: #1f1f1f;
+  color: #d1d2d3;
+}
+.popup-header {
+  padding: 16px 18px 13px;
+  border-bottom: 1px solid #3f3f46;
+}
+.popup-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+.inline-icon { display: block; flex: none; }
+.popup-subtitle { margin-top: 4px; color: #999999; font-size: 12px; }
+.popup-content { padding: 20px 18px 24px; }
+.popup-content p { margin: 0 0 16px; color: #b4b4b4; font-size: 13px; line-height: 1.6; }
+.link { display: inline-flex; align-items: center; gap: 4px; color: #4c9aff; font-size: 13px; text-decoration: none; }
+.link:hover { text-decoration: underline; }
