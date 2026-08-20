@@ -1,32 +1,52 @@
+from pathlib import Path
+
 from PIL import Image, ImageDraw
 
-SIZE = 512
-BG = (142, 142, 160)      # ChatGPT gray
-WHITE = (255, 255, 255)
+BASE_SIZE = 512
+SCALE = 4
+BACKGROUND = (28, 30, 52)
+PANEL = (42, 45, 76)
+LINE = (248, 250, 252)
+ACCENT = (92, 230, 190)
 
 
-def draw_icon(path, size):
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    s = size / 512
-    pad = 64 * s
-    r = 64 * s
-    # background rounded square
-    d.rounded_rectangle([pad, pad, 512 - pad, 512 - pad], radius=r, fill=BG)
-    # white chat bubble
-    bx, by, bw, bh = 140 * s, 120 * s, 232 * s, 272 * s
-    rr = 52 * s
-    d.rounded_rectangle([bx, by, bx + bw, by + bh], radius=rr, fill=WHITE)
-    # bubble tail
-    tx, ty, tw, th = bx, by + bh - 40 * s, 46 * s, 40 * s
-    rr2 = 20 * s
-    d.rounded_rectangle([tx, ty, tx + tw, ty + th], radius=rr2, fill=BG)
-    img = img.convert("RGB")
-    img.save(path)
+def scaled_points(points):
+    return [(round(x * SCALE), round(y * SCALE)) for x, y in points]
 
 
-import os
-os.makedirs("public/icon", exist_ok=True)
-for size in (16, 32, 48, 96, 128, 192, 256, 512):
-    draw_icon(f"public/icon/{size}.png", size)
-print("icons generated:", sorted(os.listdir("public/icon")))
+def draw_icon(path: Path, size: int) -> None:
+    canvas_size = BASE_SIZE * SCALE
+    image = Image.new("RGB", (canvas_size, canvas_size), BACKGROUND)
+    draw = ImageDraw.Draw(image)
+
+    # A quiet rounded square keeps the mark legible at browser-toolbar sizes.
+    draw.rounded_rectangle(
+        [40 * SCALE, 40 * SCALE, 472 * SCALE, 472 * SCALE],
+        radius=116 * SCALE,
+        fill=PANEL,
+    )
+
+    points = scaled_points([(126, 346), (214, 270), (298, 302), (388, 168)])
+    line_width = 26 * SCALE
+    node_radius = 22 * SCALE
+    draw.line(points, fill=LINE, width=line_width, joint="curve")
+
+    for x, y in points:
+        draw.ellipse(
+            [x - node_radius, y - node_radius, x + node_radius, y + node_radius],
+            fill=ACCENT,
+        )
+        inner_radius = 7 * SCALE
+        draw.ellipse(
+            [x - inner_radius, y - inner_radius, x + inner_radius, y + inner_radius],
+            fill=LINE,
+        )
+
+    image.resize((size, size), Image.Resampling.LANCZOS).save(path, optimize=True)
+
+
+output_dir = Path("public/icon")
+output_dir.mkdir(parents=True, exist_ok=True)
+for icon_size in (16, 32, 48, 96, 128, 192, 256, 512):
+    draw_icon(output_dir / f"{icon_size}.png", icon_size)
+print("icons generated:", sorted(path.name for path in output_dir.glob("*.png")))
