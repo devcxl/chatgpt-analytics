@@ -118,14 +118,18 @@ function parsePageResponseMessage(raw: string): PageAnalyticsResponseMessage | n
   try {
     const value: unknown = JSON.parse(raw);
     if (!isObject(value)) return null;
-    if (typeof value.url !== 'string' || typeof value.status !== 'number') return null;
-    if (value.groupBy !== null && typeof value.groupBy !== 'string') return null;
-    if (typeof value.body !== 'string') return null;
+    const url = value.url;
+    const status = value.status;
+    const groupBy = value.groupBy;
+    const body = value.body;
+    if (typeof url !== 'string' || typeof status !== 'number') return null;
+    if (groupBy !== null && typeof groupBy !== 'string') return null;
+    if (typeof body !== 'string') return null;
     return {
-      url: value.url,
-      status: value.status,
-      groupBy: value.groupBy,
-      body: value.body,
+      url,
+      status,
+      groupBy,
+      body,
     };
   } catch {
     return null;

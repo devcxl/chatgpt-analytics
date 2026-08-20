@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare WXT generated types
+        run: npx wxt prepare
+
       - name: Lint
         run: npm run lint
 
