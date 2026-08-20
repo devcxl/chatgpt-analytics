@@ -1,92 +1,107 @@
 # ChatGPT Analytics
 
-基于 WXT 的 Chrome 浏览器插件，**增强 ChatGPT 统计界面**：通过 ChatGPT 内部统计接口
-`/backend-api/wham/analytics/daily-workspace-usage-counts` 页面响应中的 token / 活跃度 / 模型分布等数据，
-并以 ECharts 渲染更丰富的可视化图表。
+[English](README.md) | [简体中文](README.zh.md)
 
-## 功能
+A WXT-based browser extension that enhances the ChatGPT Codex Analytics page. It visualizes token usage, activity, model distribution, and client distribution from the analytics responses already requested by the page.
 
-打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) 页面时，插件会在官方统计图表下方追加增强内容，包含：
+## Features
 
-| 图表 | 内容 |
+When you open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics), the extension appends enhanced content below the official analytics charts:
+
+| Chart | Contents |
 | --- | --- |
-| Token 消耗趋势 | 缓存输入 / 未缓存输入 / 输出 / 合计（面积图） |
-| 积分消耗趋势 | credits 使用曲线（面积图） |
-| 活跃度 | 用户数 / 线程数 / 轮次（柱状图） |
-| 模型分布 | 各模型使用量占比（环形图） |
-| 客户端分布 | OpenAI / Codex 等客户端占比（环形图） |
+| Token usage trend | Cached input, uncached input, output, and total tokens (area chart) |
+| Credits usage trend | Credits usage over time (area chart) |
+| Activity | Users, threads, and turns (bar chart) |
+| Model distribution | Usage share by model (doughnut chart) |
+| Client distribution | Usage share by client, such as Web and Codex (doughnut chart) |
 
-- 聚合维度跟随官方 Analytics 页面切换：**按天 / 按周 / 按月**
-- 汇总统计卡片：用户活动日数、轮次数、线程活动数、积分、Token 总量、统计区间
-- 增强内容可折叠，数据仅在官方页面完成请求后自动同步
-- 跟随系统深色/浅色主题，样式与 ChatGPT 暗色界面协调
-- 根据 Analytics 页面 `lang` 自动切换中文 / English，其他语言默认使用 English
+- The aggregation period follows the official Analytics page: **day / week / month**
+- Summary cards for user activity days, turns, thread activity, credits, total tokens, and date range
+- The enhanced panel can be collapsed and updates after the official page receives new data
+- Dark and light theme support
+- Automatic Chinese / English UI selection from the Analytics page language; other languages fall back to English
 
-## 技术栈
+## Technology
 
-- **[WXT](https://wxt.dev/)** — Next-gen Web Extension 框架（替代 Manifest V3 的繁琐配置）
-- **Vue 3** — 图表面板 UI（`@wxt-dev/module-vue` 支持 content script 中用 Vue）
-- **ECharts 6** — 声明式图表，按需引入各图表/组件模块
-- **Lucide** — Vue SVG 图标库，统一处理按钮和状态图标
-- **Shadow DOM** — 通过 `createShadowRootUi` 注入，样式与宿主页面隔离，避免冲突
+- **[WXT](https://wxt.dev/)** — Next-generation Web Extension framework
+- **Vue 3** — UI for the injected analytics panel
+- **ECharts 6** — On-demand chart modules for visualizations
+- **Lucide** — Vue SVG icon library
+- **Shadow DOM** — Isolated styles for the injected panel
 
-## 项目结构
+## Project structure
 
-```
+```text
 chatgpt-analytics/
 ├── entrypoints/
-│   ├── stats.content/   # 注入到 Codex Analytics 页面的 content script
-│   │   ├── index.ts     # defineContentScript：Shadow DOM UI 挂载点
-│   │   └── App.vue      # 增强图表 + 统计明细表格（Vue + ECharts）
-│   └── popup/           # 扩展弹窗入口
+│   ├── analytics-interceptor.content.ts # Main-world fetch/XHR response observer
+│   ├── stats.content/                   # Content script for the Codex Analytics page
+│   │   ├── index.ts                     # Shadow DOM UI mounting
+│   │   └── App.vue                      # Charts and usage details table
+│   └── popup/                           # Extension popup
 │       ├── index.html
 │       ├── main.ts
-│       ├── App.vue      # 跳转统计页入口
+│       ├── App.vue                      # Analytics page link
 │       └── style.css
 ├── utils/
-│   ├── types.ts         # 接口数据类型
-│   ├── config.ts        # 默认配置（维度、图表高度等）
-│   ├── api.ts           # 页面统计响应监听、解析与数据归一化
-│   └── charts.ts        # 数据聚合与图表数据集转换
-├── public/icon/         # 插件图标（16~512）
-├── wxt.config.ts        # WXT 配置（Vue 模块 + Chrome）
+│   ├── types.ts                         # Analytics response types
+│   ├── config.ts                         # Panel configuration
+│   ├── api.ts                            # Response listening, parsing, and normalization
+│   ├── charts.ts                          # Data aggregation and chart datasets
+│   ├── i18n.ts                            # Locale detection and translations
+│   └── page-bridge.ts                     # Main-world / isolated-world event bridge
+├── public/icon/                           # Extension icons (16 to 512 px)
+├── wxt.config.ts                          # WXT configuration
 └── package.json
 ```
 
-## 安装与开发
+## Installation and development
 
-前置：Node.js ≥ 22、Chrome 浏览器。
+Prerequisites: Node.js >= 22 and Chrome or Firefox.
 
 ```bash
-# 1. 安装依赖（npm cache 需指向可写目录，见下方说明）
+# 1. Install dependencies
 npm install
 
-# 2. 开发模式（自动重载，改动即刷新）
+# 2. Start development mode
 npm run dev
 
-# 3. 打包并生成 .zip（用于手动安装）
-npm run pack
+# 3. Build a production extension
+npm run build
 ```
 
-### Chrome 中加载
+### Load in Chrome
 
-1. 打开 `chrome://extensions/`
-2. 开启右上角「开发者模式」
-3. 点击「加载已解压的扩展程序」，选择本项目目录
-4. 打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) 页面，在官方图表下方查看增强内容
+1. Open `chrome://extensions/`.
+2. Enable Developer mode.
+3. Click **Load unpacked** and select `.output/chrome-mv3` after running `npm run build`.
+4. Open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) and view the enhanced content below the official charts.
 
-### 打包成 zip 安装
+### Load in Firefox
+
+1. Run `npx wxt build --browser firefox`.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on** and select `.output/firefox-mv2/manifest.json`.
+4. Open the Analytics page.
+
+### Create distribution archives
 
 ```bash
+# Chrome
 npm run pack
-# 生成 .output/chatgpt-analytics-1.0.0-chrome.zip（文件名以实际版本为准）
+# .output/chatgpt-analytics-1.0.0-chrome.zip
+
+# Firefox
+npx wxt zip --browser firefox
+# .output/chatgpt-analytics-1.0.0-firefox.zip
 ```
 
-在 Chrome 扩展管理页选择「更新」，或手动将 zip 拖入扩展目录即可。
+The actual archive name includes the version from `package.json`.
 
-## 环境说明（重要）
+## Environment notes
 
-本环境的 `npm cache` 默认目录为只读文件系统，需手动指定可写缓存目录：
+If the default npm cache is read-only, use a writable cache directory:
 
 ```bash
 export npm_config_cache=/tmp/npm-cache
@@ -94,16 +109,15 @@ mkdir -p /tmp/npm-cache
 npm install
 ```
 
-（若 `/tmp` 不可写，可将缓存指向其它可写目录，如 `~/Projects/.npm-cache`。）
+If `/tmp` is not writable, use another writable directory such as `~/Projects/.npm-cache`.
 
-## 数据获取说明
+## Data access and privacy
 
-- 插件不主动请求统计接口，也不读取或保存 token。页面主世界监听当前 Analytics 页面已经发出的
-  `fetch/XHR` 响应，因此请求使用页面自身携带的 Cookie、Authorization 等请求头。
-- Popup 只负责打开统计页面，不直接请求内部接口，因此不会额外申请 Cookie 权限。
-- 接口为 OpenAI 内部接口、未公开文档，**可能随时变更**。若接口变化导致
-  请求失败，面板会显示具体错误信息，可在 `utils/api.ts` 中调整。
-- 直接 curl 测试会返回 401（无 cookie），属正常现象。
+- The extension does not actively request the analytics endpoint and does not read or store tokens. A main-world content script observes the `fetch/XHR` responses already requested by the Analytics page, so the page's own cookies, `Authorization` header, and other request headers are used.
+- The popup only opens the Analytics page and does not request internal data or require additional cookie permissions.
+- The endpoint is an undocumented internal OpenAI endpoint and may change without notice. If the page changes its response format, update `utils/api.ts`.
+- If the official page does not request a particular aggregation period, the extension does not issue a replacement request.
+- A direct `curl` request normally returns 401 without the browser session cookies.
 
 ## License
 
