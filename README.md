@@ -37,7 +37,7 @@ When you open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings
 - Summary cards for user activity days, turns, thread activity, credits, total tokens, and date range
 - The enhanced panel can be collapsed and updates after the official page receives new data
 - Dark and light theme support
-- Automatic Chinese / English UI selection from the Analytics page language; other languages fall back to English
+- Standard WebExtension i18n with English and Simplified Chinese catalogs; the browser extension locale selects the UI and Chrome Web Store listing text
 
 ## Technology
 
@@ -45,6 +45,7 @@ When you open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings
 - **Vue 3** — UI for the injected analytics panel
 - **ECharts 6** — On-demand chart modules for visualizations
 - **Lucide** — Vue SVG icon library
+- **`@wxt-dev/i18n`** — WXT's type-safe wrapper around the standard WebExtension i18n API
 - **Shadow DOM** — Isolated styles for the injected panel
 
 ## Project structure
@@ -64,12 +65,14 @@ chatgpt-analytics/
 │       ├── main.ts
 │       ├── App.vue                      # Analytics page link
 │       └── style.css
+├── locales/                             # Source localization catalogs
+│   ├── en.json
+│   └── zh_CN.json
 ├── utils/
 │   ├── types.ts                         # Analytics response types
 │   ├── config.ts                         # Panel configuration
 │   ├── api.ts                            # Response listening, parsing, and normalization
 │   ├── charts.ts                          # Data aggregation and chart datasets
-│   ├── i18n.ts                            # Locale detection and translations
 │   └── page-bridge.ts                     # Main-world / isolated-world event bridge
 ├── public/icon/                           # Extension icons (16 to 512 px)
 ├── wxt.config.ts                          # WXT configuration
@@ -151,6 +154,7 @@ If `/tmp` is not writable, use another writable directory such as `~/Projects/.n
 
 - The extension does not actively request the analytics endpoint and does not read or store tokens. A main-world content script observes the `fetch/XHR` responses already requested by the Analytics page, so the page's own cookies, `Authorization` header, and other request headers are used.
 - The popup only opens the Analytics page and does not request internal data or require additional cookie permissions.
+- Localization follows the browser's extension UI locale, as required by the standard `browser.i18n` API; changing it requires changing the browser language.
 - The endpoint is an undocumented internal OpenAI endpoint and may change without notice. If the page changes its response format, update `utils/api.ts`.
 - If the official page does not request a particular aggregation period, the extension does not issue a replacement request.
 - A direct `curl` request normally returns 401 without the browser session cookies.

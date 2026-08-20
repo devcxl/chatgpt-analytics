@@ -37,7 +37,7 @@
 - 汇总统计卡片：用户活动日数、轮次数、线程活动数、积分、Token 总量和统计区间
 - 增强面板可折叠，并在官方页面收到新数据后自动更新
 - 支持深色和浅色主题
-- 根据 Analytics 页面语言自动切换中文 / English，其他语言默认使用 English
+- 使用标准 WebExtension i18n，提供 English 和简体中文语言包；浏览器扩展语言会决定界面和 Chrome Web Store 展示文案
 
 ## 技术栈
 
@@ -45,6 +45,7 @@
 - **Vue 3** — 注入式统计面板 UI
 - **ECharts 6** — 按需引入图表模块
 - **Lucide** — Vue SVG 图标库
+- **`@wxt-dev/i18n`** — WXT 对标准 WebExtension i18n API 的类型安全封装
 - **Shadow DOM** — 隔离注入面板样式
 
 ## 项目结构
@@ -64,12 +65,14 @@ chatgpt-analytics/
 │       ├── main.ts
 │       ├── App.vue                      # 统计页面入口
 │       └── style.css
+├── locales/                             # 源语言包
+│   ├── en.json
+│   └── zh_CN.json
 ├── utils/
 │   ├── types.ts                         # 统计响应类型
 │   ├── config.ts                         # 面板配置
 │   ├── api.ts                            # 响应监听、解析和归一化
 │   ├── charts.ts                          # 数据聚合和图表数据集
-│   ├── i18n.ts                            # 语言检测和翻译
 │   └── page-bridge.ts                     # 主世界与隔离世界事件桥接
 ├── public/icon/                           # 插件图标（16~512 px）
 ├── wxt.config.ts                          # WXT 配置
@@ -151,6 +154,7 @@ npm install
 
 - 插件不会主动请求统计接口，也不会读取或保存 token。页面主世界脚本只监听 Analytics 页面已经发出的 `fetch/XHR` 响应，因此请求使用页面自身携带的 Cookie、`Authorization` 和其它请求头。
 - Popup 只负责打开 Analytics 页面，不请求内部数据，也不需要额外的 Cookie 权限。
+- 语言遵循标准 `browser.i18n` API 使用浏览器扩展 UI 语言；如需切换语言，需要更改浏览器语言。
 - 该接口是 OpenAI 未公开的内部接口，可能随时变更。如果页面响应格式发生变化，可调整 `utils/api.ts`。
 - 如果官方页面没有请求某个聚合周期，插件不会自行补发请求。
 - 直接使用 `curl` 请求时没有浏览器会话 Cookie，通常会返回 401，这是正常现象。
