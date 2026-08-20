@@ -1,8 +1,17 @@
-# ChatGPT Analytics
+<p align="center">
+  <img src="./public/icon/128.png" width="96" alt="ChatGPT Analytics 图标" />
+</p>
 
-[English](README.md) | [简体中文](README.zh.md)
+<h1 align="center">ChatGPT Analytics</h1>
 
-基于 WXT 的浏览器插件，用于增强 ChatGPT Codex Analytics 页面。插件读取页面已经请求的统计响应，并可视化 Token、活跃度、模型分布和客户端分布。
+<p align="center">
+  <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a>
+</p>
+
+<p align="center">
+  基于 WXT 的浏览器插件，用于增强 ChatGPT Codex Analytics 页面。<br />
+  插件读取页面已经请求的统计响应，并可视化 Token、活跃度、模型分布和客户端分布。
+</p>
 
 ## 界面预览
 
@@ -122,6 +131,10 @@ npm install
 - 该接口是 OpenAI 未公开的内部接口，可能随时变更。如果页面响应格式发生变化，可调整 `utils/api.ts`。
 - 如果官方页面没有请求某个聚合周期，插件不会自行补发请求。
 - 直接使用 `curl` 请求时没有浏览器会话 Cookie，通常会返回 401，这是正常现象。
+
+## 免责声明
+
+本项目是独立的社区插件，与 OpenAI 或 ChatGPT 没有任何隶属、背书或赞助关系。插件依赖未公开的内部接口和页面行为，这些内容可能随时变更或失效。使用者需自行承担使用风险；项目不保证数据准确性、服务可用性或兼容性。
 
 ## License
 

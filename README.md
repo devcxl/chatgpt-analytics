@@ -1,8 +1,17 @@
-# ChatGPT Analytics
+<p align="center">
+  <img src="./public/icon/128.png" width="96" alt="ChatGPT Analytics logo" />
+</p>
 
-[English](README.md) | [简体中文](README.zh.md)
+<h1 align="center">ChatGPT Analytics</h1>
 
-A WXT-based browser extension that enhances the ChatGPT Codex Analytics page. It visualizes token usage, activity, model distribution, and client distribution from the analytics responses already requested by the page.
+<p align="center">
+  <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a>
+</p>
+
+<p align="center">
+  A WXT-based browser extension that enhances the ChatGPT Codex Analytics page.<br />
+  It visualizes token usage, activity, model distribution, and client distribution from the analytics responses already requested by the page.
+</p>
 
 ## Preview
 
@@ -122,6 +131,10 @@ If `/tmp` is not writable, use another writable directory such as `~/Projects/.n
 - The endpoint is an undocumented internal OpenAI endpoint and may change without notice. If the page changes its response format, update `utils/api.ts`.
 - If the official page does not request a particular aggregation period, the extension does not issue a replacement request.
 - A direct `curl` request normally returns 401 without the browser session cookies.
+
+## Disclaimer
+
+This project is an independent community extension and is not affiliated with, endorsed by, or sponsored by OpenAI or ChatGPT. It relies on undocumented internal endpoints and page behavior that may change or stop working at any time. Use it at your own risk; no guarantee is made regarding data accuracy, availability, or compatibility.
 
 ## License
 
