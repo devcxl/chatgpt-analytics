@@ -4,6 +4,10 @@
 
 基于 WXT 的浏览器插件，用于增强 ChatGPT Codex Analytics 页面。插件读取页面已经请求的统计响应，并可视化 Token、活跃度、模型分布和客户端分布。
 
+## 界面预览
+
+<img width="1684" height="1318" alt="中文界面预览" src="https://github.com/user-attachments/assets/71ee04ca-0390-47e3-ae02-c45d0cfe9b48" />
+
 ## 功能
 
 打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) 页面时，插件会在官方统计图表下方追加增强内容：

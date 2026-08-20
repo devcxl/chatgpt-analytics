@@ -4,6 +4,10 @@
 
 A WXT-based browser extension that enhances the ChatGPT Codex Analytics page. It visualizes token usage, activity, model distribution, and client distribution from the analytics responses already requested by the page.
 
+## Preview
+
+<img width="1689" height="1315" alt="English interface preview" src="https://github.com/user-attachments/assets/2dcac32d-500c-4606-9c81-bc329e4171eb" />
+
 ## Features
 
 When you open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics), the extension appends enhanced content below the official analytics charts:
