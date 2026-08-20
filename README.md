@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+</p>
+
+<p align="center">
   A WXT-based browser extension that enhances the ChatGPT Codex Analytics page.<br />
   It visualizes token usage, activity, model distribution, and client distribution from the analytics responses already requested by the page.
 </p>
@@ -47,6 +51,9 @@ When you open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings
 
 ```text
 chatgpt-analytics/
+├── .github/workflows/                  # CI and draft release workflows
+│   ├── ci.yml
+│   └── release.yml
 ├── entrypoints/
 │   ├── analytics-interceptor.content.ts # Main-world fetch/XHR response observer
 │   ├── stats.content/                   # Content script for the Codex Analytics page
@@ -111,6 +118,22 @@ npx wxt zip --browser firefox
 ```
 
 The actual archive name includes the version from `package.json`.
+
+## Continuous integration and releases
+
+GitHub Actions runs lint, type checking, and Chrome/Firefox builds on pushes to `main` and on pull requests targeting `main`.
+
+To create a draft release, update the package version, commit it, and push a matching `v*` tag:
+
+```bash
+npm version patch --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "chore: release v1.0.1"
+git tag v1.0.1
+git push origin main v1.0.1
+```
+
+The tag must match the version in `package.json`. The release workflow creates a draft GitHub Release with Chrome and Firefox archives attached. Review and publish the draft manually.
 
 ## Environment notes
 

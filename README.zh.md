@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
+</p>
+
+<p align="center">
   基于 WXT 的浏览器插件，用于增强 ChatGPT Codex Analytics 页面。<br />
   插件读取页面已经请求的统计响应，并可视化 Token、活跃度、模型分布和客户端分布。
 </p>
@@ -47,6 +51,9 @@
 
 ```text
 chatgpt-analytics/
+├── .github/workflows/                  # CI 和草稿 Release 工作流
+│   ├── ci.yml
+│   └── release.yml
 ├── entrypoints/
 │   ├── analytics-interceptor.content.ts # 页面主世界 fetch/XHR 响应监听器
 │   ├── stats.content/                   # Codex Analytics 页面 Content Script
@@ -111,6 +118,22 @@ npx wxt zip --browser firefox
 ```
 
 实际压缩包文件名会包含 `package.json` 中的版本号。
+
+## 持续集成与发布
+
+GitHub Actions 会在推送到 `main` 或提交针对 `main` 的 Pull Request 时，执行 lint、类型检查以及 Chrome/Firefox 构建。
+
+创建草稿 Release 时，先更新版本号并提交，再推送匹配的 `v*` 标签：
+
+```bash
+npm version patch --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "chore: release v1.0.1"
+git tag v1.0.1
+git push origin main v1.0.1
+```
+
+标签版本必须与 `package.json` 中的版本一致。Release 工作流会创建一个附带 Chrome 和 Firefox 压缩包的 GitHub 草稿 Release，检查无误后再手动发布。
 
 ## 环境说明
 

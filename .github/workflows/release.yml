@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and create draft release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Check tag version
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "$tag_version" != "$package_version" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $package_version"
+            exit 1
+          fi
+
+      - name: Build Chrome package
+        run: npm run pack
+
+      - name: Build Firefox package
+        run: npx wxt zip --browser firefox
+
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          chrome_zip="$(find .output -maxdepth 1 -type f -name '*-chrome.zip' -print -quit)"
+          firefox_zip="$(find .output -maxdepth 1 -type f -name '*-firefox.zip' -print -quit)"
+          test -n "$chrome_zip"
+          test -n "$firefox_zip"
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --title "chatgpt-analytics $GITHUB_REF_NAME" \
+            --generate-notes \
+            "$chrome_zip" \
+            "$firefox_zip"
