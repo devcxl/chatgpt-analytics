@@ -1,4 +1,4 @@
-import type { Locale } from './i18n';
+import { i18n } from '#i18n';
 import type { GroupBy, UsageBucket } from './types';
 
 export interface TimeSeriesPoint {
@@ -41,14 +41,17 @@ export const MODEL_NAMES: Record<string, string> = {
   codex: 'Codex',
 };
 
-const CLIENT_NAMES: Record<string, Record<Locale, string>> = {
-  web: { 'zh-CN': '网页端', en: 'Web' },
-  ios: { 'zh-CN': 'iOS', en: 'iOS' },
-  android: { 'zh-CN': 'Android', en: 'Android' },
-  desktop: { 'zh-CN': '桌面端', en: 'Desktop' },
-  api: { 'zh-CN': 'API', en: 'API' },
-  codex: { 'zh-CN': 'Codex', en: 'Codex' },
-};
+function clientLabel(clientId: string): string {
+  switch (clientId) {
+    case 'web': return i18n.t('clientWeb');
+    case 'ios': return i18n.t('clientIos');
+    case 'android': return i18n.t('clientAndroid');
+    case 'desktop': return i18n.t('clientDesktop');
+    case 'api': return i18n.t('clientApi');
+    case 'codex': return i18n.t('clientCodex');
+    default: return clientId || i18n.t('unknownClient');
+  }
+}
 
 function numberOrZero(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
@@ -110,7 +113,7 @@ export function toCreditsSeries(buckets: UsageBucket[]): CreditsSeries {
   );
 }
 
-function modelLabel(slug: string, locale: Locale): string {
+function modelLabel(slug: string): string {
   const value = slug.trim();
   const exact = MODEL_NAMES[value.toLowerCase()];
   if (exact) return exact;
@@ -119,18 +122,17 @@ function modelLabel(slug: string, locale: Locale): string {
   for (const [prefix, name] of prefixes) {
     if (lower.startsWith(`${prefix}-`)) return name;
   }
-  return value || (locale === 'zh-CN' ? '未知模型' : 'Unknown model');
+  return value || i18n.t('unknownModel');
 }
 
 /** 聚合各模型的轮次数。 */
 export function toModelDistribution(
   buckets: UsageBucket[],
-  locale: Locale = 'zh-CN',
 ): { names: string[]; values: number[] } {
   const values = new Map<string, number>();
   for (const bucket of buckets) {
     for (const model of bucket.models ?? []) {
-      const name = modelLabel(model.model, locale);
+      const name = modelLabel(model.model);
       values.set(name, (values.get(name) ?? 0) + numberOrZero(model.turns));
     }
   }
@@ -140,14 +142,12 @@ export function toModelDistribution(
 /** 聚合各客户端的轮次数。 */
 export function toClientDistribution(
   buckets: UsageBucket[],
-  locale: Locale = 'zh-CN',
 ): { names: string[]; values: number[] } {
   const values = new Map<string, number>();
   for (const bucket of buckets) {
     for (const client of bucket.clients ?? []) {
       const key = client.client_id.trim();
-      const names = CLIENT_NAMES[key.toLowerCase()];
-      const name = names?.[locale] ?? (key || (locale === 'zh-CN' ? '未知客户端' : 'Unknown client'));
+      const name = clientLabel(key.toLowerCase());
       values.set(name, (values.get(name) ?? 0) + numberOrZero(client.turns));
     }
   }

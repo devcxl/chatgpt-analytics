@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@lucide/vue": "^1.33.0",
+    "@wxt-dev/i18n": "^0.2.7",
     "echarts": "6.1.0"
   }
 }

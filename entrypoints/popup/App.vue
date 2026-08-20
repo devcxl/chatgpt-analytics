@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ChartNoAxesColumn, ExternalLink } from '@lucide/vue';
 import { CHATGPT_STATS_URL } from '~/utils/api';
-import { createTranslator, detectBrowserLocale } from '~/utils/i18n';
+import { i18n } from '#i18n';
+import { browser } from 'wxt/browser';
 
-const { locale, t } = createTranslator(detectBrowserLocale());
-document.documentElement.lang = locale === 'zh-CN' ? 'zh-CN' : 'en';
+const t = i18n.t;
+document.documentElement.lang = browser.i18n.getUILanguage();
 
 function openStats() {
   window.open(CHATGPT_STATS_URL, '_blank');

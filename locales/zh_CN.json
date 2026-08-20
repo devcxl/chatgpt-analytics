@@ -1,0 +1,124 @@
+{
+  "extName": {
+    "message": "ChatGPT 统计增强",
+    "description": "浏览器和扩展商店中显示的扩展名称。"
+  },
+  "extDescription": {
+    "message": "为 ChatGPT Codex Analytics 增加本地化 Token、活跃度、模型和客户端图表。",
+    "description": "浏览器和扩展商店中显示的简短扩展描述。"
+  },
+  "panelTitle": {
+    "message": "ChatGPT 使用统计"
+  },
+  "viewStats": {
+    "message": "查看 ChatGPT 统计"
+  },
+  "panelSubtitle": {
+    "message": "增强内容会显示在官方统计图表下方"
+  },
+  "popupInstruction": {
+    "message": "请打开 ChatGPT 的统计页面查看增强图表和明细表格。"
+  },
+  "openStats": {
+    "message": "打开统计页面"
+  },
+  "close": {
+    "message": "关闭"
+  },
+  "waitingData": {
+    "message": "等待官方统计数据"
+  },
+  "noData": {
+    "message": "暂无数据"
+  },
+  "unsupportedGroup": {
+    "message": "官方页面返回了不支持的聚合维度：{value}"
+  },
+  "readDataError": {
+    "message": "读取官方统计数据失败"
+  },
+  "tokenTrend": {
+    "message": "Token 消耗趋势"
+  },
+  "creditsTrend": {
+    "message": "积分消耗趋势"
+  },
+  "activity": {
+    "message": "活跃度（用户 / 线程 / 轮次）"
+  },
+  "modelDistribution": {
+    "message": "模型分布"
+  },
+  "clientDistribution": {
+    "message": "客户端分布"
+  },
+  "uncachedInput": {
+    "message": "未缓存输入"
+  },
+  "cachedInput": {
+    "message": "缓存输入"
+  },
+  "output": {
+    "message": "输出"
+  },
+  "total": {
+    "message": "合计"
+  },
+  "users": {
+    "message": "用户"
+  },
+  "threads": {
+    "message": "线程"
+  },
+  "turns": {
+    "message": "轮次"
+  },
+  "credits": {
+    "message": "积分"
+  },
+  "activeUserDays": {
+    "message": "用户活动日数"
+  },
+  "turnCount": {
+    "message": "轮次数"
+  },
+  "activeThreadCount": {
+    "message": "线程活动数"
+  },
+  "totalTokens": {
+    "message": "Token 总量"
+  },
+  "dateRange": {
+    "message": "统计区间"
+  },
+  "details": {
+    "message": "统计明细"
+  },
+  "group": {
+    "message": "分组"
+  },
+  "unknownModel": {
+    "message": "未知模型"
+  },
+  "unknownClient": {
+    "message": "未知客户端"
+  },
+  "clientWeb": {
+    "message": "网页端"
+  },
+  "clientIos": {
+    "message": "iOS"
+  },
+  "clientAndroid": {
+    "message": "Android"
+  },
+  "clientDesktop": {
+    "message": "桌面端"
+  },
+  "clientApi": {
+    "message": "API"
+  },
+  "clientCodex": {
+    "message": "Codex"
+  }
+}

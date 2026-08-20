@@ -1,0 +1,124 @@
+{
+  "extName": {
+    "message": "ChatGPT Analytics",
+    "description": "Extension name shown in the browser and extension store."
+  },
+  "extDescription": {
+    "message": "Enhance ChatGPT Codex Analytics with localized token, activity, model, and client charts.",
+    "description": "Short extension description shown in the browser and extension store."
+  },
+  "panelTitle": {
+    "message": "ChatGPT Usage Analytics"
+  },
+  "viewStats": {
+    "message": "View ChatGPT analytics"
+  },
+  "panelSubtitle": {
+    "message": "Enhanced content appears below the official analytics charts"
+  },
+  "popupInstruction": {
+    "message": "Open the ChatGPT analytics page to view enhanced charts and details."
+  },
+  "openStats": {
+    "message": "Open analytics page"
+  },
+  "close": {
+    "message": "Close"
+  },
+  "waitingData": {
+    "message": "Waiting for official analytics data"
+  },
+  "noData": {
+    "message": "No data"
+  },
+  "unsupportedGroup": {
+    "message": "The official page returned an unsupported aggregation: {value}"
+  },
+  "readDataError": {
+    "message": "Unable to read official analytics data"
+  },
+  "tokenTrend": {
+    "message": "Token usage trend"
+  },
+  "creditsTrend": {
+    "message": "Credits usage trend"
+  },
+  "activity": {
+    "message": "Activity (users / threads / turns)"
+  },
+  "modelDistribution": {
+    "message": "Model distribution"
+  },
+  "clientDistribution": {
+    "message": "Client distribution"
+  },
+  "uncachedInput": {
+    "message": "Uncached input"
+  },
+  "cachedInput": {
+    "message": "Cached input"
+  },
+  "output": {
+    "message": "Output"
+  },
+  "total": {
+    "message": "Total"
+  },
+  "users": {
+    "message": "Users"
+  },
+  "threads": {
+    "message": "Threads"
+  },
+  "turns": {
+    "message": "Turns"
+  },
+  "credits": {
+    "message": "Credits"
+  },
+  "activeUserDays": {
+    "message": "User activity days"
+  },
+  "turnCount": {
+    "message": "Turns"
+  },
+  "activeThreadCount": {
+    "message": "Thread activity"
+  },
+  "totalTokens": {
+    "message": "Total tokens"
+  },
+  "dateRange": {
+    "message": "Date range"
+  },
+  "details": {
+    "message": "Usage details"
+  },
+  "group": {
+    "message": "Group"
+  },
+  "unknownModel": {
+    "message": "Unknown model"
+  },
+  "unknownClient": {
+    "message": "Unknown client"
+  },
+  "clientWeb": {
+    "message": "Web"
+  },
+  "clientIos": {
+    "message": "iOS"
+  },
+  "clientAndroid": {
+    "message": "Android"
+  },
+  "clientDesktop": {
+    "message": "Desktop"
+  },
+  "clientApi": {
+    "message": "API"
+  },
+  "clientCodex": {
+    "message": "Codex"
+  }
+}

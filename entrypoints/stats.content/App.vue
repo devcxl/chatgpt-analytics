@@ -12,7 +12,7 @@ import {
 } from 'echarts/components';
 import { CONFIG, CHART_COLORS } from '~/utils/config';
 import { subscribeToPageAnalytics } from '~/utils/api';
-import { createTranslator, detectPageLocale } from '~/utils/i18n';
+import { i18n } from '#i18n';
 import type { AnalyticsResponse, GroupBy } from '~/utils/types';
 import {
   formatNumber,
@@ -26,7 +26,7 @@ import {
   toTokenSeries,
 } from '~/utils/charts';
 
-const { locale, t } = createTranslator(detectPageLocale());
+const t = i18n.t;
 
 // ECharts 按需注册，避免把整套图表打入 content script。
 echarts.use([
@@ -272,8 +272,8 @@ function applyAnalytics(response: AnalyticsResponse) {
   state.tokens = toTokenSeries(response.data);
   state.activity = toActivitySeries(response.data);
   state.credits = toCreditsSeries(response.data);
-  state.models = toModelDistribution(response.data, locale);
-  state.clients = toClientDistribution(response.data, locale);
+  state.models = toModelDistribution(response.data);
+  state.clients = toClientDistribution(response.data);
 }
 
 function handleAnalyticsError(_error: Error) {
