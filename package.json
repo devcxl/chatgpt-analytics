@@ -1,0 +1,26 @@
+{
+  "name": "chatgpt-analytics",
+  "version": "1.0.0",
+  "description": "在 ChatGPT 统计界面增强可视化：基于内部统计接口绘制 token / 活跃度 / 模型分布等图表",
+  "author": "devcxl",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt dev",
+    "build": "wxt build",
+    "pack": "wxt zip",
+    "type-check": "vue-tsc --noEmit --allowJs false"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@wxt-dev/module-vue": "1.0.3",
+    "typescript": "^5.7.3",
+    "vue": "3.5.41",
+    "vue-tsc": "3.3.10",
+    "wxt": "0.21.4"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.33.0",
+    "echarts": "6.1.0"
+  }
+}
