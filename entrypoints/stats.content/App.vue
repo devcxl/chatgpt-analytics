@@ -276,7 +276,7 @@ function applyAnalytics(response: AnalyticsResponse) {
   state.clients = toClientDistribution(response.data, locale);
 }
 
-function handleAnalyticsError(error: Error) {
+function handleAnalyticsError(_error: Error) {
   state.loading = false;
   state.error = t('readDataError');
 }

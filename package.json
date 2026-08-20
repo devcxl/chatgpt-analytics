@@ -9,12 +9,18 @@
     "dev": "wxt dev",
     "build": "wxt build",
     "pack": "wxt zip",
+    "lint": "eslint .",
     "type-check": "vue-tsc --noEmit --allowJs false"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^22.10.0",
     "@wxt-dev/module-vue": "1.0.3",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "^10.10.0",
+    "globals": "^16.5.0",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.67.0",
     "vue": "3.5.41",
     "vue-tsc": "3.3.10",
     "wxt": "0.21.4"

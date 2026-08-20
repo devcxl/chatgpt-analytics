@@ -91,12 +91,18 @@ function installXhrInterceptor(): void {
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
 
-  XMLHttpRequest.prototype.open = function (this: XMLHttpRequest, ...args: any[]) {
+  XMLHttpRequest.prototype.open = function (
+    this: XMLHttpRequest,
+    ...args: Parameters<typeof originalOpen>
+  ) {
     xhrTargets.set(this, resolveRequestTarget(args[1]));
     return Reflect.apply(originalOpen, this, args);
   } as typeof XMLHttpRequest.prototype.open;
 
-  XMLHttpRequest.prototype.send = function (this: XMLHttpRequest, ...args: any[]) {
+  XMLHttpRequest.prototype.send = function (
+    this: XMLHttpRequest,
+    ...args: Parameters<typeof originalSend>
+  ) {
     const target = xhrTargets.get(this);
     if (target) {
       this.addEventListener('loadend', () => {
