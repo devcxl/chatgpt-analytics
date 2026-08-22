@@ -8,4 +8,18 @@ export default defineConfig({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
   },
+  hooks: {
+    'build:manifestGenerated': (wxt, manifest) => {
+      if (wxt.config.browser !== 'firefox') return;
+      manifest.browser_specific_settings = {
+        gecko: {
+          id: 'chatgpt-analytics@devcxl.cn',
+          strict_min_version: '128.0',
+          data_collection_permissions: {
+            required: ['none'],
+          },
+        },
+      };
+    },
+  },
 });

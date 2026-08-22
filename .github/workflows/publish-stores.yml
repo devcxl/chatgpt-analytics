@@ -1,0 +1,116 @@
+name: Publish Extension Stores
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published release tag to submit
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-stores-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-assets
+          gh release download "$RELEASE_TAG" --dir release-assets
+
+      - name: Validate store configuration and assets
+        id: stores
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          shopt -s nullglob
+          CHROME_ZIPS=(release-assets/*-chrome.zip)
+          FIREFOX_ZIPS=(release-assets/*-firefox.zip)
+          SOURCE_ZIPS=(release-assets/*-sources.zip)
+          CHROME_READY=false
+          FIREFOX_READY=false
+
+          if [ -n "$CHROME_EXTENSION_ID$CHROME_CLIENT_ID$CHROME_CLIENT_SECRET$CHROME_REFRESH_TOKEN" ]; then
+            if [ -z "$CHROME_EXTENSION_ID" ] || [ -z "$CHROME_CLIENT_ID" ] || [ -z "$CHROME_CLIENT_SECRET" ] || [ -z "$CHROME_REFRESH_TOKEN" ]; then
+              echo "::error::Chrome store credentials are incomplete"
+              exit 1
+            fi
+            if [ "${#CHROME_ZIPS[@]}" -ne 1 ]; then
+              echo "::error::Expected exactly one Chrome ZIP asset, found ${#CHROME_ZIPS[@]}"
+              exit 1
+            fi
+            CHROME_READY=true
+            echo "chrome_zip=${CHROME_ZIPS[0]}" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -n "$FIREFOX_EXTENSION_ID$FIREFOX_JWT_ISSUER$FIREFOX_JWT_SECRET" ]; then
+            if [ -z "$FIREFOX_EXTENSION_ID" ] || [ -z "$FIREFOX_JWT_ISSUER" ] || [ -z "$FIREFOX_JWT_SECRET" ]; then
+              echo "::error::Firefox store credentials are incomplete"
+              exit 1
+            fi
+            if [ "${#FIREFOX_ZIPS[@]}" -ne 1 ] || [ "${#SOURCE_ZIPS[@]}" -ne 1 ]; then
+              echo "::error::Expected exactly one Firefox ZIP and one source ZIP asset"
+              exit 1
+            fi
+            FIREFOX_READY=true
+            echo "firefox_zip=${FIREFOX_ZIPS[0]}" >> "$GITHUB_OUTPUT"
+            echo "source_zip=${SOURCE_ZIPS[0]}" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$CHROME_READY" = "false" ] && [ "$FIREFOX_READY" = "false" ]; then
+            echo "::error::No complete browser store credentials are configured"
+            exit 1
+          fi
+
+          echo "chrome=$CHROME_READY" >> "$GITHUB_OUTPUT"
+          echo "firefox=$FIREFOX_READY" >> "$GITHUB_OUTPUT"
+
+      - name: Submit to stores
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          ARGS=()
+          if [ "${{ steps.stores.outputs.chrome }}" = "true" ]; then
+            ARGS+=(--chrome-zip "${{ steps.stores.outputs.chrome_zip }}" --chrome-skip-submit-review)
+          fi
+          if [ "${{ steps.stores.outputs.firefox }}" = "true" ]; then
+            ARGS+=(--firefox-zip "${{ steps.stores.outputs.firefox_zip }}" --firefox-sources-zip "${{ steps.stores.outputs.source_zip }}" --firefox-channel listed)
+          fi
+          npx wxt submit "${ARGS[@]}"

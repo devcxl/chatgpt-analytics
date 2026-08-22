@@ -9,6 +9,8 @@
     "dev": "wxt dev",
     "build": "wxt build",
     "pack": "wxt zip",
+    "zip:chrome": "wxt zip -b chrome",
+    "zip:firefox": "wxt zip -b firefox",
     "lint": "eslint .",
     "type-check": "vue-tsc --noEmit --allowJs false"
   },
