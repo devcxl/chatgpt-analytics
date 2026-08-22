@@ -9,7 +9,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+  <a href="https://chromewebstore.google.com/detail/chatgpt-analytics/lpnbpllikegochooknfohankonnfikhd"><img src="https://img.shields.io/chrome-web-store/v/lpnbpllikegochooknfohankonnfikhd?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store" alt="Chrome Web Store version" /></a>
+  <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status" /></a>
+  <a href="https://github.com/devcxl/chatgpt-analytics/blob/main/LICENSE"><img src="https://img.shields.io/github/license/devcxl/chatgpt-analytics" alt="MIT License" /></a>
 </p>
 
 <p align="center">
@@ -79,7 +81,18 @@ chatgpt-analytics/
 └── package.json
 ```
 
-## Installation and development
+## Installation
+
+Install the published extension from the Chrome Web Store:
+
+- [ChatGPT Analytics on the Chrome Web Store](https://chromewebstore.google.com/detail/chatgpt-analytics/lpnbpllikegochooknfohankonnfikhd)
+
+After installation:
+
+1. Open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) while signed in to your account.
+2. Scroll below the official analytics charts to view the enhanced panel.
+
+## Development
 
 Prerequisites: Node.js >= 22 and Chrome or Firefox.
 
@@ -94,12 +107,15 @@ npm run dev
 npm run build
 ```
 
-### Load in Chrome
+### Load the unpacked build in Chrome
 
-1. Open `chrome://extensions/`.
-2. Enable Developer mode.
-3. Click **Load unpacked** and select `.output/chrome-mv3` after running `npm run build`.
-4. Open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) and view the enhanced content below the official charts.
+1. Run `npm run build` (or `npm run pack` to also generate `.output/chatgpt-analytics-*.zip`).
+2. Open `chrome://extensions/`.
+3. Enable **Developer mode** in the top right.
+4. Click **Load unpacked** and select `.output/chrome-mv3`.
+5. Open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) and view the enhanced content below the official charts.
+
+To load the packaged zip instead of the unpacked folder, drag `.output/chatgpt-analytics-*.zip` onto `chrome://extensions/`.
 
 ### Load in Firefox
 

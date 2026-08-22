@@ -9,7 +9,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
+  <a href="https://chromewebstore.google.com/detail/chatgpt-analytics/lpnbpllikegochooknfohankonnfikhd"><img src="https://img.shields.io/chrome-web-store/v/lpnbpllikegochooknfohankonnfikhd?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store" alt="Chrome Web Store 版本" /></a>
+  <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI 状态" /></a>
+  <a href="https://github.com/devcxl/chatgpt-analytics/blob/main/LICENSE"><img src="https://img.shields.io/github/license/devcxl/chatgpt-analytics" alt="MIT 许可证" /></a>
 </p>
 
 <p align="center">
@@ -79,7 +81,18 @@ chatgpt-analytics/
 └── package.json
 ```
 
-## 安装与开发
+## 安装
+
+从 Chrome Web Store 安装正式发布的版本：
+
+- [ChatGPT Analytics - Chrome Web Store](https://chromewebstore.google.com/detail/chatgpt-analytics/lpnbpllikegochooknfohankonnfikhd)
+
+安装完成后：
+
+1. 在已登录的 ChatGPT 账号中打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics)。
+2. 滚动到官方统计图表下方查看增强面板。
+
+## 开发
 
 前置环境：Node.js ≥ 22，以及 Chrome 或 Firefox。
 
@@ -94,12 +107,15 @@ npm run dev
 npm run build
 ```
 
-### 在 Chrome 中加载
+### 在 Chrome 中加载未打包构建
 
-1. 打开 `chrome://extensions/`。
-2. 开启「开发者模式」。
-3. 执行 `npm run build` 后，点击「加载已解压的扩展程序」，选择 `.output/chrome-mv3`。
-4. 打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics)，在官方图表下方查看增强内容。
+1. 执行 `npm run build`（或 `npm run pack` 同时生成 `.output/chatgpt-analytics-*.zip`）。
+2. 打开 `chrome://extensions/`。
+3. 开启右上角「开发者模式」。
+4. 点击「加载已解压的扩展程序」，选择 `.output/chrome-mv3`。
+5. 打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics)，在官方图表下方查看增强内容。
+
+如果想直接加载打包文件而不是未打包目录，可将 `.output/chatgpt-analytics-*.zip` 拖拽到 `chrome://extensions/` 页面。
 
 ### 在 Firefox 中加载
 
