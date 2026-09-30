@@ -8,9 +8,11 @@
   "scripts": {
     "dev": "wxt dev",
     "build": "wxt build",
+    "build:chrome": "wxt build -b chrome",
+    "build:firefox": "wxt build -b firefox --mv3",
     "pack": "wxt zip",
     "zip:chrome": "wxt zip -b chrome",
-    "zip:firefox": "wxt zip -b firefox",
+    "zip:firefox": "wxt zip -b firefox --mv3",
     "lint": "eslint .",
     "type-check": "vue-tsc --noEmit --allowJs false"
   },
