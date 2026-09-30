@@ -118,7 +118,9 @@ jobs:
 
           # Chrome Web Store API v1.1 已于 2026-10-15 停用，这里固定走 v2：
           # 认证用 GCP 服务账号（需在开发者后台绑定，每个发布者仅限一个）。
-          npx publish-extension \
+          # 版本由 npx 显式指定：本 workflow 检出的是发布 tag，tag 内的 node_modules
+          # 不一定装了这个 CLI，或装的版本与仓库当前锁定值不同，不能依赖本地 bin 解析。
+          npx --yes 'publish-browser-extension@^6.1.0' \
             --chrome-zip "${{ steps.stores.outputs.chrome_zip }}" \
             --chrome-api-version v2 \
             --chrome-skip-submit-review
