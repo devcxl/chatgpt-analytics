@@ -1,14 +1,6 @@
 import { i18n } from '#i18n';
 import type { GroupBy, UsageBucket } from './types';
 
-export interface TimeSeriesPoint {
-  date: string;
-  label: string;
-  threads: number;
-  turns: number;
-  users: number;
-}
-
 export interface TokenUsageSeries {
   date: string[];
   uncachedInput: number[];
@@ -29,7 +21,36 @@ export interface CreditsSeries {
   credits: number[];
 }
 
-export const MODEL_NAMES: Record<string, string> = {
+/** 饼图数据：展示名与取值一一对应，按取值从大到小排列。 */
+export interface Distribution {
+  names: string[];
+  values: number[];
+}
+
+/** 汇总卡片。用户数、线程数与轮次为各分组活动值之和，不代表唯一用户或唯一线程。 */
+export interface UsageSummary {
+  range: string;
+  users: number;
+  turns: number;
+  threads: number;
+  credits: number;
+  totalTokens: string;
+  cachedInput: string;
+  uncachedInput: string;
+  outputTokens: string;
+}
+
+/** 面板一次渲染所需的全部数据，由 toAnalyticsView 一次性生成。 */
+export interface AnalyticsView {
+  summary: UsageSummary;
+  tokens: TokenUsageSeries;
+  activity: ActivitySeries;
+  credits: CreditsSeries;
+  models: Distribution;
+  clients: Distribution;
+}
+
+const MODEL_NAMES: Record<string, string> = {
   'gpt-5': 'GPT-5',
   'gpt-4o': 'GPT-4o',
   'gpt-4o-mini': 'GPT-4o mini',
@@ -53,134 +74,22 @@ function clientLabel(clientId: string): string {
   }
 }
 
-function numberOrZero(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
-}
-
 function sortedBuckets(buckets: UsageBucket[]): UsageBucket[] {
   return [...buckets].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** 把接口数据转换为按日期排序的时间序列。 */
-export function toTimeSeries(buckets: UsageBucket[]): TimeSeriesPoint[] {
-  return sortedBuckets(buckets).map((bucket) => ({
-    date: bucket.date,
-    label: bucket.date.slice(5),
-    users: numberOrZero(bucket.totals.users),
-    threads: numberOrZero(bucket.totals.threads),
-    turns: numberOrZero(bucket.totals.turns),
-  }));
-}
-
-/** Token 消耗：缓存输入、未缓存输入、输出与合计。 */
-export function toTokenSeries(buckets: UsageBucket[]): TokenUsageSeries {
-  return sortedBuckets(buckets).reduce<TokenUsageSeries>(
-    (series, bucket) => {
-      series.date.push(bucket.date);
-      series.uncachedInput.push(numberOrZero(bucket.totals.uncached_text_input_tokens));
-      series.cachedInput.push(numberOrZero(bucket.totals.cached_text_input_tokens));
-      series.output.push(numberOrZero(bucket.totals.text_output_tokens));
-      series.total.push(numberOrZero(bucket.totals.text_total_tokens));
-      return series;
-    },
-    { date: [], uncachedInput: [], cachedInput: [], output: [], total: [] },
-  );
-}
-
-/** 活跃度：用户、线程与轮次。 */
-export function toActivitySeries(buckets: UsageBucket[]): ActivitySeries {
-  return sortedBuckets(buckets).reduce<ActivitySeries>(
-    (series, bucket) => {
-      series.date.push(bucket.date);
-      series.users.push(numberOrZero(bucket.totals.users));
-      series.threads.push(numberOrZero(bucket.totals.threads));
-      series.turns.push(numberOrZero(bucket.totals.turns));
-      return series;
-    },
-    { date: [], users: [], threads: [], turns: [] },
-  );
-}
-
-/** 积分消耗。 */
-export function toCreditsSeries(buckets: UsageBucket[]): CreditsSeries {
-  return sortedBuckets(buckets).reduce<CreditsSeries>(
-    (series, bucket) => {
-      series.date.push(bucket.date);
-      series.credits.push(numberOrZero(bucket.totals.credits));
-      return series;
-    },
-    { date: [], credits: [] },
-  );
-}
-
-function modelLabel(slug: string): string {
-  const value = slug.trim();
-  const exact = MODEL_NAMES[value.toLowerCase()];
-  if (exact) return exact;
-  const lower = value.toLowerCase();
-  const prefixes = Object.entries(MODEL_NAMES).sort(([a], [b]) => b.length - a.length);
-  for (const [prefix, name] of prefixes) {
-    if (lower.startsWith(`${prefix}-`)) return name;
-  }
-  return value || i18n.t('unknownModel');
-}
-
-/** 聚合各模型的轮次数。 */
-export function toModelDistribution(
-  buckets: UsageBucket[],
-): { names: string[]; values: number[] } {
-  const values = new Map<string, number>();
-  for (const bucket of buckets) {
-    for (const model of bucket.models ?? []) {
-      const name = modelLabel(model.model);
-      values.set(name, (values.get(name) ?? 0) + numberOrZero(model.turns));
-    }
-  }
-  return sortDistribution(values);
-}
-
-/** 聚合各客户端的轮次数。 */
-export function toClientDistribution(
-  buckets: UsageBucket[],
-): { names: string[]; values: number[] } {
-  const values = new Map<string, number>();
-  for (const bucket of buckets) {
-    for (const client of bucket.clients ?? []) {
-      const key = client.client_id.trim();
-      const name = clientLabel(key.toLowerCase());
-      values.set(name, (values.get(name) ?? 0) + numberOrZero(client.turns));
-    }
-  }
-  return sortDistribution(values);
-}
-
-function sortDistribution(values: Map<string, number>): { names: string[]; values: number[] } {
-  return [...values.entries()]
-    .filter(([, value]) => value > 0)
-    .sort((a, b) => b[1] - a[1])
-    .reduce(
-      (result, [name, value]) => {
-        result.names.push(name);
-        result.values.push(value);
-        return result;
-      },
-      { names: [], values: [] } as { names: string[]; values: number[] },
-    );
-}
-
-/** 汇总统计卡片数据。用户数和线程数为各分组活动值之和，不代表唯一用户或唯一线程。 */
-export function toSummary(buckets: UsageBucket[]) {
+function toSummary(buckets: UsageBucket[]): UsageSummary {
   const ordered = sortedBuckets(buckets);
   const totals = ordered.reduce(
     (acc, bucket) => {
-      acc.users += numberOrZero(bucket.totals.users);
-      acc.turns += numberOrZero(bucket.totals.turns);
-      acc.threads += numberOrZero(bucket.totals.threads);
-      acc.credits += numberOrZero(bucket.totals.credits);
-      acc.totalTokens += numberOrZero(bucket.totals.text_total_tokens);
-      acc.uncached += numberOrZero(bucket.totals.uncached_text_input_tokens);
-      acc.cached += numberOrZero(bucket.totals.cached_text_input_tokens);
-      acc.output += numberOrZero(bucket.totals.text_output_tokens);
+      acc.users += bucket.totals.users;
+      acc.turns += bucket.totals.turns;
+      acc.threads += bucket.totals.threads;
+      acc.credits += bucket.totals.credits;
+      acc.totalTokens += bucket.totals.text_total_tokens;
+      acc.uncached += bucket.totals.uncached_text_input_tokens;
+      acc.cached += bucket.totals.cached_text_input_tokens;
+      acc.output += bucket.totals.text_output_tokens;
       return acc;
     },
     { users: 0, turns: 0, threads: 0, credits: 0, totalTokens: 0, uncached: 0, cached: 0, output: 0 },
@@ -198,6 +107,113 @@ export function toSummary(buckets: UsageBucket[]) {
     cachedInput: formatTokens(totals.cached),
     uncachedInput: formatTokens(totals.uncached),
     outputTokens: formatTokens(totals.output),
+  };
+}
+
+/** Token 消耗：缓存输入、未缓存输入、输出与合计。 */
+function toTokenSeries(buckets: UsageBucket[]): TokenUsageSeries {
+  return sortedBuckets(buckets).reduce<TokenUsageSeries>(
+    (series, bucket) => {
+      series.date.push(bucket.date);
+      series.uncachedInput.push(bucket.totals.uncached_text_input_tokens);
+      series.cachedInput.push(bucket.totals.cached_text_input_tokens);
+      series.output.push(bucket.totals.text_output_tokens);
+      series.total.push(bucket.totals.text_total_tokens);
+      return series;
+    },
+    { date: [], uncachedInput: [], cachedInput: [], output: [], total: [] },
+  );
+}
+
+/** 活跃度：用户、线程与轮次。 */
+function toActivitySeries(buckets: UsageBucket[]): ActivitySeries {
+  return sortedBuckets(buckets).reduce<ActivitySeries>(
+    (series, bucket) => {
+      series.date.push(bucket.date);
+      series.users.push(bucket.totals.users);
+      series.threads.push(bucket.totals.threads);
+      series.turns.push(bucket.totals.turns);
+      return series;
+    },
+    { date: [], users: [], threads: [], turns: [] },
+  );
+}
+
+/** 积分消耗。 */
+function toCreditsSeries(buckets: UsageBucket[]): CreditsSeries {
+  return sortedBuckets(buckets).reduce<CreditsSeries>(
+    (series, bucket) => {
+      series.date.push(bucket.date);
+      series.credits.push(bucket.totals.credits);
+      return series;
+    },
+    { date: [], credits: [] },
+  );
+}
+
+function modelLabel(slug: string): string {
+  const value = slug.trim();
+  const exact = MODEL_NAMES[value.toLowerCase()];
+  if (exact) return exact;
+
+  // 精确匹配失败时按前缀归类，例如 gpt-5-2025-08-07 计入 GPT-5。
+  const lower = value.toLowerCase();
+  const prefixes = Object.entries(MODEL_NAMES).sort(([a], [b]) => b.length - a.length);
+  for (const [prefix, name] of prefixes) {
+    if (lower.startsWith(`${prefix}-`)) return name;
+  }
+  return value || i18n.t('unknownModel');
+}
+
+/** 聚合各模型的轮次数。 */
+function toModelDistribution(buckets: UsageBucket[]): Distribution {
+  const values = new Map<string, number>();
+  for (const bucket of buckets) {
+    for (const model of bucket.models) {
+      const name = modelLabel(model.model);
+      values.set(name, (values.get(name) ?? 0) + model.turns);
+    }
+  }
+  return sortDistribution(values);
+}
+
+/** 聚合各客户端的轮次数。 */
+function toClientDistribution(buckets: UsageBucket[]): Distribution {
+  const values = new Map<string, number>();
+  for (const bucket of buckets) {
+    for (const client of bucket.clients) {
+      const name = clientLabel(client.client_id.trim().toLowerCase());
+      values.set(name, (values.get(name) ?? 0) + client.turns);
+    }
+  }
+  return sortDistribution(values);
+}
+
+function sortDistribution(values: Map<string, number>): Distribution {
+  return [...values.entries()]
+    .filter(([, value]) => value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .reduce(
+      (result, [name, value]) => {
+        result.names.push(name);
+        result.values.push(value);
+        return result;
+      },
+      { names: [], values: [] } as Distribution,
+    );
+}
+
+/** 把接口数据转换为面板所需的视图数据；没有分组数据时返回 null。 */
+export function toAnalyticsView(buckets: UsageBucket[]): AnalyticsView | null {
+  if (buckets.length === 0) return null;
+
+  return {
+    summary: toSummary(buckets),
+    tokens: toTokenSeries(buckets),
+    activity: toActivitySeries(buckets),
+    credits: toCreditsSeries(buckets),
+    models: toModelDistribution(buckets),
+    clients: toClientDistribution(buckets),
   };
 }
 

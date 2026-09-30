@@ -5,10 +5,6 @@ import App from './App.vue';
 
 const ANALYTICS_ANCHOR_SELECTOR = 'div.pb-8:nth-child(2)';
 
-function findAnalyticsAnchor(): Element | null {
-  return document.querySelector(ANALYTICS_ANCHOR_SELECTOR);
-}
-
 export default defineContentScript({
   matches: ['https://chatgpt.com/codex/cloud/settings/analytics*'],
   cssInjectionMode: 'ui',
@@ -20,11 +16,6 @@ export default defineContentScript({
       append: 'after',
       isolateEvents: true,
       onMount: (uiContainer, _shadow, shadowHost) => {
-        const anchor = findAnalyticsAnchor();
-        if (!anchor) {
-          throw new Error(`Analytics anchor not found: ${ANALYTICS_ANCHOR_SELECTOR}`);
-        }
-
         shadowHost.style.display = 'block';
         shadowHost.style.width = '100%';
 
@@ -32,13 +23,15 @@ export default defineContentScript({
         mount.id = 'chatgpt-analytics-mount';
         uiContainer.append(mount);
 
-        const parent = anchor.parentElement;
+        // 官方页面重新渲染会移除注入节点；只要 anchor 仍在，就把它插回原位。
+        // WXT 只在 anchor 存在时挂载，因此这里不再重复判空报错。
+        const anchor = document.querySelector(ANALYTICS_ANCHOR_SELECTOR);
         const observer = new MutationObserver(() => {
-          if (anchor.isConnected && anchor.nextElementSibling !== shadowHost) {
+          if (anchor?.isConnected && anchor.nextElementSibling !== shadowHost) {
             anchor.parentElement?.insertBefore(shadowHost, anchor.nextElementSibling);
           }
         });
-        if (parent) observer.observe(parent, { childList: true });
+        if (anchor?.parentElement) observer.observe(anchor.parentElement, { childList: true });
 
         const app = createApp(App);
         app.mount(mount);

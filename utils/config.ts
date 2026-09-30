@@ -1,15 +1,19 @@
 import type { GroupBy } from './types';
 
-export const CHART_COLORS = [
-  '#8e8ea0', // ChatGPT 灰
-  '#1a73e8', // 蓝
-  '#f9ab00', // 橙
-  '#00897b', // 青
-  '#db4437', // 红
-  '#9334e6', // 紫
-  '#f2b134', // 黄
-  '#00e679', // 绿
-];
+/** 图表配色，按用途取色。 */
+export const CHART_COLORS = {
+  gray: '#8e8ea0', // ChatGPT 灰
+  blue: '#1a73e8',
+  orange: '#f9ab00',
+  teal: '#00897b',
+  red: '#db4437',
+  purple: '#9334e6',
+  yellow: '#f2b134',
+  green: '#00e679',
+};
+
+/** 按定义顺序展开的调色板，供饼图等多色图使用。 */
+export const CHART_PALETTE = Object.values(CHART_COLORS);
 
 export interface AppConfig {
   /** 默认聚合维度 */

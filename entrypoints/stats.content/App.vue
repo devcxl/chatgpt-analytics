@@ -10,21 +10,24 @@ import {
   LegendComponent,
   TooltipComponent,
 } from 'echarts/components';
-import { CONFIG, CHART_COLORS } from '~/utils/config';
-import { subscribeToPageAnalytics } from '~/utils/api';
 import { i18n } from '#i18n';
-import type { AnalyticsResponse, GroupBy } from '~/utils/types';
+import { isGroupBy, subscribeToPageAnalytics } from '~/utils/api';
 import {
   formatNumber,
   formatTokens,
   labelForGroup,
-  toActivitySeries,
-  toClientDistribution,
-  toCreditsSeries,
-  toModelDistribution,
-  toSummary,
-  toTokenSeries,
+  toAnalyticsView,
+  type AnalyticsView,
 } from '~/utils/charts';
+import { CONFIG } from '~/utils/config';
+import type { AnalyticsResponse } from '~/utils/types';
+import {
+  buildActivityChart,
+  buildCreditsChart,
+  buildDistributionChart,
+  buildTokenChart,
+} from './chart-options';
+import { theme } from './theme';
 
 const t = i18n.t;
 
@@ -39,42 +42,27 @@ echarts.use([
   TooltipComponent,
 ]);
 
-const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
-const theme = {
-  bg: dark ? '#1f1f1f' : '#ffffff',
-  bgCard: dark ? '#2f2f2f' : '#f7f7f8',
-  border: dark ? '#3f3f46' : '#e5e5e5',
-  text: dark ? '#d1d2d3' : '#1f1f21',
-  subtext: dark ? '#999999' : '#666666',
-  accent: '#8e8ea0',
-};
-
 const state = reactive({
   loading: true,
   error: '',
-  summary: null as ReturnType<typeof toSummary> | null,
-  tokens: null as ReturnType<typeof toTokenSeries> | null,
-  activity: null as ReturnType<typeof toActivitySeries> | null,
-  credits: null as ReturnType<typeof toCreditsSeries> | null,
-  models: null as { names: string[]; values: number[] } | null,
-  clients: null as { names: string[]; values: number[] } | null,
-  groupBy: CONFIG.groupBy as GroupBy,
+  groupBy: CONFIG.groupBy,
   open: CONFIG.defaultOpen,
+  data: null as AnalyticsView | null,
 });
 
 const tableRows = computed(() => {
-  const { tokens, activity, credits } = state;
-  if (!tokens || !activity || !credits) return [];
-  return tokens.date.map((date, index) => ({
+  const data = state.data;
+  if (!data) return [];
+  return data.tokens.date.map((date, index) => ({
     date,
-    users: activity.users[index] ?? 0,
-    threads: activity.threads[index] ?? 0,
-    turns: activity.turns[index] ?? 0,
-    credits: credits.credits[index] ?? 0,
-    totalTokens: tokens.total[index] ?? 0,
-    cachedInput: tokens.cachedInput[index] ?? 0,
-    uncachedInput: tokens.uncachedInput[index] ?? 0,
-    output: tokens.output[index] ?? 0,
+    users: data.activity.users[index] ?? 0,
+    threads: data.activity.threads[index] ?? 0,
+    turns: data.activity.turns[index] ?? 0,
+    credits: data.credits.credits[index] ?? 0,
+    totalTokens: data.tokens.total[index] ?? 0,
+    cachedInput: data.tokens.cachedInput[index] ?? 0,
+    uncachedInput: data.tokens.uncachedInput[index] ?? 0,
+    output: data.tokens.output[index] ?? 0,
   }));
 });
 
@@ -87,179 +75,33 @@ const clientChartEl = ref<HTMLElement | null>(null);
 const chartInstances: ECharts[] = [];
 let unsubscribePageAnalytics: (() => void) | undefined;
 
-const axisText = { color: theme.subtext };
-const axisLine = { lineStyle: { color: theme.border } };
-const gridLine = { lineStyle: { color: theme.border } };
-
-function emptyChartOption(): EChartsOption {
-  return {
-    graphic: [{
-      type: 'text',
-      left: 'center',
-      top: 'middle',
-      style: { text: t('noData'), fill: theme.subtext, fontSize: 13 },
-    }],
-  } as EChartsOption;
-}
-
-function buildTokenChart(): EChartsOption | null {
-  const series = state.tokens;
-  if (!series) return null;
-  const labels = series.date.map((date) => labelForGroup(state.groupBy, date));
-  return {
-    color: [CHART_COLORS[1], CHART_COLORS[0], CHART_COLORS[4], CHART_COLORS[7]],
-    legend: { top: 0, textStyle: axisText, itemWidth: 12, itemHeight: 12 },
-    grid: { left: 48, right: 16, top: 42, bottom: 26 },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'cross' },
-      confine: true,
-      formatter: (params: unknown) => {
-        const points = (Array.isArray(params) ? params : [params]) as Array<{ axisValue: string; seriesName: string; value: number }>;
-        return points.map((point) => `${point.seriesName}: ${formatTokens(Number(point.value))}`).join('<br>');
-      },
-    },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: labels,
-      axisLine,
-      axisLabel: axisText,
-      axisTick: { show: false },
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      axisLabel: { ...axisText, formatter: (value: number) => formatTokens(value) },
-      splitLine: gridLine,
-    },
-    series: [
-            { name: t('uncachedInput'), type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.2 }, data: series.uncachedInput },
-      { name: t('cachedInput'), type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.12 }, data: series.cachedInput },
-      { name: t('output'), type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.28 }, data: series.output },
-      { name: t('total'), type: 'line', smooth: true, showSymbol: false, lineStyle: { width: 2 }, data: series.total },
-    ],
-  } as EChartsOption;
-}
-
-function buildActivityChart(): EChartsOption | null {
-  const series = state.activity;
-  if (!series) return null;
-  const labels = series.date.map((date) => labelForGroup(state.groupBy, date));
-  return {
-    color: [CHART_COLORS[2], CHART_COLORS[1], CHART_COLORS[0]],
-    legend: { top: 0, textStyle: axisText, itemWidth: 12, itemHeight: 12 },
-    grid: { left: 48, right: 16, top: 42, bottom: 26 },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      confine: true,
-      formatter: (params: unknown) => {
-        const points = (Array.isArray(params) ? params : [params]) as Array<{ seriesName: string; value: number }>;
-        return points.map((point) => `${point.seriesName}: ${formatNumber(Number(point.value))}`).join('<br>');
-      },
-    },
-    xAxis: { type: 'category', data: labels, axisLine, axisLabel: axisText, axisTick: { show: false } },
-    yAxis: { type: 'value', axisLine: { show: false }, axisLabel: axisText, splitLine: gridLine },
-    series: [
-      { name: t('users'), type: 'bar', barMaxWidth: 18, data: series.users },
-      { name: t('threads'), type: 'bar', barMaxWidth: 18, data: series.threads },
-      { name: t('turns'), type: 'bar', barMaxWidth: 18, data: series.turns },
-    ],
-  } as EChartsOption;
-}
-
-function buildCreditsChart(): EChartsOption | null {
-  const series = state.credits;
-  if (!series) return null;
-  const labels = series.date.map((date) => labelForGroup(state.groupBy, date));
-  return {
-    color: [CHART_COLORS[2]],
-    grid: { left: 48, right: 16, top: 20, bottom: 26 },
-    tooltip: {
-      trigger: 'axis',
-      confine: true,
-      formatter: (params: unknown) => {
-        const point = ((Array.isArray(params) ? params : [params]) as Array<{ axisValue: string; value: number }>)[0];
-        return point ? `${point.axisValue}: ${Number(point.value).toFixed(2)} ${t('credits')}` : '';
-      },
-    },
-    xAxis: { type: 'category', boundaryGap: false, data: labels, axisLine, axisLabel: axisText, axisTick: { show: false } },
-    yAxis: { type: 'value', axisLine: { show: false }, axisLabel: axisText, splitLine: gridLine },
-    series: [{ name: t('credits'), type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.25 }, data: series.credits }],
-  } as EChartsOption;
-}
-
-function buildDistributionChart(
-  distribution: { names: string[]; values: number[] } | null,
-): EChartsOption {
-  if (!distribution || distribution.names.length === 0) return emptyChartOption();
-  return {
-    color: CHART_COLORS,
-    tooltip: {
-      trigger: 'item',
-      formatter: (params: unknown) => {
-        const point = params as { name: string; value: number; percent: number };
-        return `${point.name}<br>${formatNumber(Number(point.value))} ${t('turns')} (${point.percent}%)`;
-      },
-    },
-    legend: {
-      orient: 'vertical',
-      right: 0,
-      top: 'middle',
-      width: 105,
-      textStyle: { color: theme.text },
-      itemWidth: 10,
-      itemHeight: 10,
-      type: 'scroll',
-    },
-    series: [{
-      type: 'pie',
-      radius: ['42%', '68%'],
-      center: ['32%', '50%'],
-      avoidLabelOverlap: true,
-      label: { show: false },
-      emphasis: { label: { show: true, color: theme.text, formatter: '{b}' } },
-      data: distribution.names.map((name, index) => ({ name, value: distribution.values[index] })),
-    }],
-  } as EChartsOption;
-}
-
 function disposeCharts() {
   while (chartInstances.length) chartInstances.pop()?.dispose();
 }
 
 function renderCharts() {
-  const elements = [
-    tokenChartEl.value,
-    creditsChartEl.value,
-    activityChartEl.value,
-    modelChartEl.value,
-    clientChartEl.value,
+  const data = state.data;
+  if (!data) return;
+
+  const targets: Array<[HTMLElement | null, EChartsOption]> = [
+    [tokenChartEl.value, buildTokenChart(data.tokens, state.groupBy)],
+    [creditsChartEl.value, buildCreditsChart(data.credits, state.groupBy)],
+    [activityChartEl.value, buildActivityChart(data.activity, state.groupBy)],
+    [modelChartEl.value, buildDistributionChart(data.models)],
+    [clientChartEl.value, buildDistributionChart(data.clients)],
   ];
-  if (elements.some((element) => !element)) return;
+  if (targets.some(([element]) => !element)) return;
 
   disposeCharts();
-  const options = [
-    buildTokenChart(),
-    buildCreditsChart(),
-    buildActivityChart(),
-    buildDistributionChart(state.models),
-    buildDistributionChart(state.clients),
-  ];
-  elements.forEach((element, index) => {
+  for (const [element, option] of targets) {
     const chart = echarts.init(element as HTMLElement, undefined, { renderer: 'canvas' });
-    chart.setOption(options[index] ?? emptyChartOption());
+    chart.setOption(option);
     chartInstances.push(chart);
-  });
-}
-
-function isSupportedGroupBy(value: string): value is GroupBy {
-  return value === 'day' || value === 'week' || value === 'month';
+  }
 }
 
 function applyAnalytics(response: AnalyticsResponse) {
-  if (!isSupportedGroupBy(response.group_by)) {
+  if (!isGroupBy(response.group_by)) {
     state.loading = false;
     state.error = t('unsupportedGroup', { value: response.group_by });
     return;
@@ -268,17 +110,13 @@ function applyAnalytics(response: AnalyticsResponse) {
   state.groupBy = response.group_by;
   state.error = '';
   state.loading = false;
-  state.summary = toSummary(response.data);
-  state.tokens = toTokenSeries(response.data);
-  state.activity = toActivitySeries(response.data);
-  state.credits = toCreditsSeries(response.data);
-  state.models = toModelDistribution(response.data);
-  state.clients = toClientDistribution(response.data);
+  state.data = toAnalyticsView(response.data);
 }
 
-function handleAnalyticsError(_error: Error) {
+function handleAnalyticsError(error: Error) {
   state.loading = false;
   state.error = t('readDataError');
+  console.warn('[chatgpt-analytics] 无法解析页面统计响应', error);
 }
 
 function togglePanel() {
@@ -291,10 +129,10 @@ function togglePanel() {
 }
 
 watch(
-  [() => state.summary, () => state.open],
-  async ([summary, open]) => {
+  [() => state.data, () => state.open],
+  async ([, open]) => {
     await nextTick();
-    if (summary && open) renderCharts();
+    if (open) renderCharts();
     else disposeCharts();
   },
   { flush: 'post' },
@@ -490,14 +328,14 @@ onBeforeUnmount(() => {
       <div class="gap-body">
         <div v-if="state.loading" class="gap-status">{{ t('waitingData') }}</div>
         <div v-else-if="state.error" class="gap-error">{{ state.error }}</div>
-        <template v-else-if="state.summary?.range">
+        <template v-else-if="state.data">
           <div class="gap-summary">
-            <div class="gap-stat"><div class="k">{{ t('activeUserDays') }}</div><div class="v">{{ state.summary.users }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('turnCount') }}</div><div class="v">{{ state.summary.turns }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('activeThreadCount') }}</div><div class="v">{{ state.summary.threads }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('credits') }}</div><div class="v">{{ state.summary.credits }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('totalTokens') }}</div><div class="v">{{ state.summary.totalTokens }}</div></div>
-            <div class="gap-stat range"><div class="k">{{ t('dateRange') }}</div><div class="v">{{ state.summary.range || t('noData') }}</div></div>
+            <div class="gap-stat"><div class="k">{{ t('activeUserDays') }}</div><div class="v">{{ state.data.summary.users }}</div></div>
+            <div class="gap-stat"><div class="k">{{ t('turnCount') }}</div><div class="v">{{ state.data.summary.turns }}</div></div>
+            <div class="gap-stat"><div class="k">{{ t('activeThreadCount') }}</div><div class="v">{{ state.data.summary.threads }}</div></div>
+            <div class="gap-stat"><div class="k">{{ t('credits') }}</div><div class="v">{{ state.data.summary.credits }}</div></div>
+            <div class="gap-stat"><div class="k">{{ t('totalTokens') }}</div><div class="v">{{ state.data.summary.totalTokens }}</div></div>
+            <div class="gap-stat range"><div class="k">{{ t('dateRange') }}</div><div class="v">{{ state.data.summary.range }}</div></div>
           </div>
 
           <div class="gap-charts">

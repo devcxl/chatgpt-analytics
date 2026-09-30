@@ -16,6 +16,11 @@ export const CHATGPT_STATS_URL = 'https://chatgpt.com/codex/cloud/settings/analy
 
 type JsonObject = Record<string, unknown>;
 
+/** 判断接口返回的聚合维度是否受支持。 */
+export function isGroupBy(value: unknown): value is GroupBy {
+  return value === 'day' || value === 'week' || value === 'month';
+}
+
 function isObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -32,8 +37,15 @@ function readString(value: unknown, path: string): string {
   return value;
 }
 
+/** 数值字段也可能以字符串返回；空字符串与缺失值同样视为无效。 */
+function toNumberValue(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value.trim() !== '') return Number(value);
+  return NaN;
+}
+
 function readNumber(value: unknown, path: string): number {
-  const number = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  const number = toNumberValue(value);
   if (!Number.isFinite(number)) throw new Error(`统计接口字段 ${path} 格式无效`);
   return number;
 }
@@ -89,8 +101,11 @@ function parseModel(value: unknown, path: string): UsageModel {
   };
 }
 
-/** 将未知 JSON 响应归一化为应用内部使用的结构。 */
-export function parseAnalyticsResponse(payload: unknown, fallbackGroupBy: string): AnalyticsResponse {
+/**
+ * 将未知 JSON 响应归一化为应用内部使用的结构，是接口数据的唯一校验点；
+ * 校验后的数据在应用内部按类型信任，不再重复防御。
+ */
+function parseAnalyticsResponse(payload: unknown, fallbackGroupBy: string): AnalyticsResponse {
   const response = readObject(payload, 'response');
   const data = readArray(response.data, 'data').map((value, index): UsageBucket => {
     const bucketPath = `data[${index}]`;
@@ -136,10 +151,6 @@ function parsePageResponseMessage(raw: string): PageAnalyticsResponseMessage | n
   }
 }
 
-function isGroupBy(value: unknown): value is GroupBy {
-  return value === 'day' || value === 'week' || value === 'month';
-}
-
 function parsePageResponse(raw: string): AnalyticsResponse | null {
   const message = parsePageResponseMessage(raw);
   if (!message) return null;
@@ -148,8 +159,7 @@ function parsePageResponse(raw: string): AnalyticsResponse | null {
   }
 
   const fallbackGroupBy = isGroupBy(message.groupBy) ? message.groupBy : 'day';
-  const analytics = parseAnalyticsResponse(JSON.parse(message.body), fallbackGroupBy);
-  return isGroupBy(analytics.group_by) ? analytics : null;
+  return parseAnalyticsResponse(JSON.parse(message.body), fallbackGroupBy);
 }
 
 /** 订阅当前 Analytics 页面已经发出的统计响应，不由插件主动访问接口。 */
@@ -157,8 +167,7 @@ export function subscribeToPageAnalytics(
   onResponse: (response: AnalyticsResponse) => void,
   onError: (error: Error) => void = () => undefined,
 ): () => void {
-  const handleEvent = (event: Event) => {
-    const detail = (event as CustomEvent<unknown>).detail;
+  const handleDetail = (detail: unknown) => {
     if (typeof detail !== 'string') return;
 
     try {
@@ -169,9 +178,11 @@ export function subscribeToPageAnalytics(
     }
   };
 
+  const handleEvent = (event: Event) => handleDetail((event as CustomEvent<unknown>).detail);
+
   document.addEventListener(ANALYTICS_RESPONSE_EVENT, handleEvent);
   const buffered = document.getElementById(ANALYTICS_RESPONSE_BUFFER_ID)?.textContent;
-  if (buffered) handleEvent(new CustomEvent(ANALYTICS_RESPONSE_EVENT, { detail: buffered }));
+  if (buffered) handleDetail(buffered);
 
   return () => document.removeEventListener(ANALYTICS_RESPONSE_EVENT, handleEvent);
 }

@@ -39,7 +39,8 @@ export interface UsageBucket {
 /** 接口完整响应 */
 export interface AnalyticsResponse {
   data: UsageBucket[];
-  group_by: GroupBy | string;
+  /** 接口返回的聚合维度；是否为受支持的取值由消费方判断 */
+  group_by: string;
 }
 
 export type GroupBy = 'day' | 'week' | 'month';
