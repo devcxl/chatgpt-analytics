@@ -63,6 +63,9 @@ jobs:
       - name: Build & package Firefox
         run: npm run zip:firefox
 
+      - name: Verify manifests
+        run: ./scripts/verify-manifest.sh
+
       - name: Verify release assets
         shell: bash
         run: |

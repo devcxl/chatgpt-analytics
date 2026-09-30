@@ -39,7 +39,10 @@ jobs:
         run: npm run type-check
 
       - name: Build Chrome extension
-        run: npm run build
+        run: npm run build:chrome
 
       - name: Build Firefox extension
-        run: npx wxt build --browser firefox
+        run: npm run build:firefox
+
+      - name: Verify manifests
+        run: ./scripts/verify-manifest.sh
