@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -47,9 +49,9 @@ jobs:
         id: stores
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
@@ -61,8 +63,8 @@ jobs:
           CHROME_READY=false
           FIREFOX_READY=false
 
-          if [ -n "$CHROME_EXTENSION_ID$CHROME_CLIENT_ID$CHROME_CLIENT_SECRET$CHROME_REFRESH_TOKEN" ]; then
-            if [ -z "$CHROME_EXTENSION_ID" ] || [ -z "$CHROME_CLIENT_ID" ] || [ -z "$CHROME_CLIENT_SECRET" ] || [ -z "$CHROME_REFRESH_TOKEN" ]; then
+          if [ -n "$CHROME_EXTENSION_ID$CHROME_PUBLISHER_ID$CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL$CHROME_SERVICE_ACCOUNT_PRIVATE_KEY" ]; then
+            if [ -z "$CHROME_EXTENSION_ID" ] || [ -z "$CHROME_PUBLISHER_ID" ] || [ -z "$CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL" ] || [ -z "$CHROME_SERVICE_ACCOUNT_PRIVATE_KEY" ]; then
               echo "::error::Chrome store credentials are incomplete"
               exit 1
             fi
@@ -96,21 +98,39 @@ jobs:
           echo "chrome=$CHROME_READY" >> "$GITHUB_OUTPUT"
           echo "firefox=$FIREFOX_READY" >> "$GITHUB_OUTPUT"
 
-      - name: Submit to stores
+      - name: Submit to Chrome Web Store
+        if: ${{ steps.stores.outputs.chrome == 'true' }}
         env:
+          # 凭证走环境变量传给 publish-extension，避免私钥出现在命令行参数里。
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
+        run: |
+          # 私钥必须是带真实换行的 PEM。配置方式：
+          #   jq -r .private_key key.json | gh secret set CHROME_SERVICE_ACCOUNT_PRIVATE_KEY
+          # 常见错误是拷贝 JSON 里的字面量 \n，签名时会报
+          # "DECODER routines::unsupported"，此处提前拦截。
+          if ! printf '%s' "$CHROME_SERVICE_ACCOUNT_PRIVATE_KEY" | grep -q '^-----BEGIN .*PRIVATE KEY-----'; then
+            echo "::error::CHROME_SERVICE_ACCOUNT_PRIVATE_KEY 不是 PEM（应以 -----BEGIN PRIVATE KEY----- 开头）。请用 jq -r .private_key 重新配置。"
+            exit 1
+          fi
+
+          # Chrome Web Store API v1.1 已于 2026-10-15 停用，这里固定走 v2：
+          # 认证用 GCP 服务账号（需在开发者后台绑定，每个发布者仅限一个）。
+          npx publish-extension \
+            --chrome-zip "${{ steps.stores.outputs.chrome_zip }}" \
+            --chrome-api-version v2 \
+            --chrome-skip-submit-review
+
+      - name: Submit to Firefox Add-ons (AMO)
+        if: ${{ steps.stores.outputs.firefox == 'true' }}
+        env:
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
-          ARGS=()
-          if [ "${{ steps.stores.outputs.chrome }}" = "true" ]; then
-            ARGS+=(--chrome-zip "${{ steps.stores.outputs.chrome_zip }}" --chrome-skip-submit-review)
-          fi
-          if [ "${{ steps.stores.outputs.firefox }}" = "true" ]; then
-            ARGS+=(--firefox-zip "${{ steps.stores.outputs.firefox_zip }}" --firefox-sources-zip "${{ steps.stores.outputs.source_zip }}" --firefox-channel listed)
-          fi
-          npx wxt submit "${ARGS[@]}"
+          npx wxt submit \
+            --firefox-zip "${{ steps.stores.outputs.firefox_zip }}" \
+            --firefox-sources-zip "${{ steps.stores.outputs.source_zip }}" \
+            --firefox-channel listed
