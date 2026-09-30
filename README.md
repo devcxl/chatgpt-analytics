@@ -61,7 +61,9 @@ chatgpt-analytics/
 │   ├── analytics-interceptor.content.ts # Main-world fetch/XHR response observer
 │   ├── stats.content/                   # Content script for the Codex Analytics page
 │   │   ├── index.ts                     # Shadow DOM UI mounting
-│   │   └── App.vue                      # Charts and usage details table
+│   │   ├── App.vue                      # Panel state, layout, and usage details table
+│   │   ├── chart-options.ts             # ECharts option builders
+│   │   └── theme.ts                     # Panel theme colors
 │   └── popup/                           # Extension popup
 │       ├── index.html
 │       ├── main.ts
@@ -72,9 +74,9 @@ chatgpt-analytics/
 │   └── zh_CN.json
 ├── utils/
 │   ├── types.ts                         # Analytics response types
-│   ├── config.ts                         # Panel configuration
+│   ├── config.ts                         # Panel configuration and chart palette
 │   ├── api.ts                            # Response listening, parsing, and normalization
-│   ├── charts.ts                          # Data aggregation and chart datasets
+│   ├── charts.ts                          # Data aggregation and panel view data
 │   └── page-bridge.ts                     # Main-world / isolated-world event bridge
 ├── public/icon/                           # Extension icons (16 to 512 px)
 ├── wxt.config.ts                          # WXT configuration

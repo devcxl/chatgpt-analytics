@@ -61,7 +61,9 @@ chatgpt-analytics/
 │   ├── analytics-interceptor.content.ts # 页面主世界 fetch/XHR 响应监听器
 │   ├── stats.content/                   # Codex Analytics 页面 Content Script
 │   │   ├── index.ts                     # Shadow DOM UI 挂载
-│   │   └── App.vue                      # 图表和统计明细表格
+│   │   ├── App.vue                      # 面板状态、布局和统计明细表格
+│   │   ├── chart-options.ts             # ECharts 配置构造
+│   │   └── theme.ts                     # 面板主题配色
 │   └── popup/                           # 扩展 Popup
 │       ├── index.html
 │       ├── main.ts
@@ -72,9 +74,9 @@ chatgpt-analytics/
 │   └── zh_CN.json
 ├── utils/
 │   ├── types.ts                         # 统计响应类型
-│   ├── config.ts                         # 面板配置
+│   ├── config.ts                         # 面板配置和图表配色
 │   ├── api.ts                            # 响应监听、解析和归一化
-│   ├── charts.ts                          # 数据聚合和图表数据集
+│   ├── charts.ts                          # 数据聚合与面板视图数据
 │   └── page-bridge.ts                     # 主世界与隔离世界事件桥接
 ├── public/icon/                           # 插件图标（16~512 px）
 ├── wxt.config.ts                          # WXT 配置
