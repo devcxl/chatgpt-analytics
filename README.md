@@ -119,30 +119,36 @@ To load the packaged zip instead of the unpacked folder, drag `.output/chatgpt-a
 
 ### Load in Firefox
 
-1. Run `npx wxt build --browser firefox`.
+1. Run `npm run build:firefox`.
 2. Open `about:debugging#/runtime/this-firefox`.
-3. Click **Load Temporary Add-on** and select `.output/firefox-mv2/manifest.json`.
+3. Click **Load Temporary Add-on** and select `.output/firefox-mv3/manifest.json`.
 4. Open the Analytics page.
 
 ### Create distribution archives
 
 ```bash
 # Chrome
-npm run pack
-# .output/chatgpt-analytics-1.0.0-chrome.zip
+npm run zip:chrome
+# Outputs .output/chatgpt-analytics-<version>-chrome.zip
 
-# Firefox
-npx wxt zip --browser firefox
-# .output/chatgpt-analytics-1.0.0-firefox.zip
+# Firefox (includes MV3 extension archive and source code archive)
+npm run zip:firefox
+# Outputs .output/chatgpt-analytics-<version>-firefox.zip and .output/chatgpt-analytics-<version>-sources.zip
 ```
 
 The actual archive name includes the version from `package.json`.
 
-## Continuous integration and releases
+## Continuous integration and automated publishing
 
-GitHub Actions runs lint, type checking, and Chrome/Firefox builds on pushes to `main` and on pull requests targeting `main`.
+### Workflows overview
 
-To create a draft release, update the package version, commit it, and push a matching `v*` tag:
+1. **CI (`ci.yml`)**: Runs Lint, Type check, Chrome/Firefox builds, and Manifest validation on pushes and PRs to `main`.
+2. **Build Draft Release (`release.yml`)**: Automatically packages Chrome and Firefox MV3 archives plus source code archives, and creates a GitHub Draft Release upon pushing a `v*` tag or manual dispatch.
+3. **Publish Extension Stores (`publish-stores.yml`)**: Triggered when a Draft Release is published or manually triggered with a tag, submitting archives to configured extension stores (Firefox AMO / Chrome Web Store) via `wxt submit`.
+
+### Publishing process
+
+Update the version, commit, and push the matching `v*` tag:
 
 ```bash
 npm version patch --no-git-tag-version
@@ -152,7 +158,24 @@ git tag v1.0.1
 git push origin main v1.0.1
 ```
 
-The tag must match the version in `package.json`. The release workflow creates a draft GitHub Release with Chrome and Firefox archives attached. Review and publish the draft manually.
+Review the draft release on GitHub Releases, then click **Publish release**. The `publish-stores.yml` workflow will automatically submit the release to configured stores.
+
+### GitHub Secrets configuration
+
+Configure the following secrets under **Settings -> Secrets and variables -> Actions**:
+
+#### Firefox Add-ons (AMO) credentials
+- `FIREFOX_EXTENSION_ID`: Extension ID (e.g. `chatgpt-analytics@devcxl.cn` or AMO UUID)
+- `AMO_JWT_ISSUER`: Mozilla AMO API key Issuer
+- `AMO_JWT_SECRET`: Mozilla AMO API key Secret
+
+#### Chrome Web Store credentials (Optional)
+- `CHROME_EXTENSION_ID`: Chrome Extension ID
+- `CHROME_PUBLISHER_ID`: Publisher UUID (required by the v2 API path `publishers/{id}/items/{id}`)
+- `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`: GCP service account email, bound in the CWS Developer Dashboard
+- `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`: Service account private key, stored as a real PEM (`jq -r .private_key key.json`)
+
+Setup steps for the v2 credentials: see [`chatgpt-markdown-exporter` AGENTS.md](https://github.com/devcxl/chatgpt-markdown-exporter/blob/master/AGENTS.md#chrome-web-store-自动发布配置).
 
 ## Environment notes
 

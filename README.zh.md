@@ -119,30 +119,36 @@ npm run build
 
 ### 在 Firefox 中加载
 
-1. 执行 `npx wxt build --browser firefox`。
+1. 执行 `npm run build:firefox`。
 2. 打开 `about:debugging#/runtime/this-firefox`。
-3. 点击「临时加载附加组件」，选择 `.output/firefox-mv2/manifest.json`。
+3. 点击「临时加载附加组件」，选择 `.output/firefox-mv3/manifest.json`。
 4. 打开 Analytics 页面。
 
 ### 创建发布压缩包
 
 ```bash
 # Chrome
-npm run pack
-# .output/chatgpt-analytics-1.0.0-chrome.zip
+npm run zip:chrome
+# 生成 .output/chatgpt-analytics-<version>-chrome.zip
 
-# Firefox
-npx wxt zip --browser firefox
-# .output/chatgpt-analytics-1.0.0-firefox.zip
+# Firefox（包含 MV3 扩展包及源码包）
+npm run zip:firefox
+# 生成 .output/chatgpt-analytics-<version>-firefox.zip 与 .output/chatgpt-analytics-<version>-sources.zip
 ```
 
 实际压缩包文件名会包含 `package.json` 中的版本号。
 
-## 持续集成与发布
+## 持续集成与自动发布
 
-GitHub Actions 会在推送到 `main` 或提交针对 `main` 的 Pull Request 时，执行 lint、类型检查以及 Chrome/Firefox 构建。
+### 工作流说明
 
-创建草稿 Release 时，先更新版本号并提交，再推送匹配的 `v*` 标签：
+1. **CI (`ci.yml`)**：在推送到 `main` 或提交针对 `main` 的 PR 时执行代码检查（Lint）、类型检查（Type check）、Chrome 与 Firefox 构建以及 Manifest 规范校验。
+2. **构建草稿发布 (`release.yml`)**：推送 `v*` 标签或手动触发时，自动构建 Chrome/Firefox MV3 扩展包及源码包，并创建 GitHub Draft Release。
+3. **自动发布至应用商店 (`publish-stores.yml`)**：当 GitHub Draft Release 正式发布（Published）或手动指定 tag 触发时，自动调用 `wxt submit` 将打包产物提交到已配置密钥的应用商店（Firefox AMO / Chrome Web Store）。
+
+### 自动化发布流程
+
+先更新版本号并提交，再推送匹配的 `v*` 标签：
 
 ```bash
 npm version patch --no-git-tag-version
@@ -152,7 +158,24 @@ git tag v1.0.1
 git push origin main v1.0.1
 ```
 
-标签版本必须与 `package.json` 中的版本一致。Release 工作流会创建一个附带 Chrome 和 Firefox 压缩包的 GitHub 草稿 Release，检查无误后再手动发布。
+在 GitHub Releases 页面确认生成的草稿 Release 无误后，点击 **Publish release**，`publish-stores.yml` 工作流将自动上传到商店。
+
+### GitHub Secrets 配置
+
+在仓库 **Settings -> Secrets and variables -> Actions** 中配置以下密钥：
+
+#### Firefox Add-ons (AMO) 发布凭证
+- `FIREFOX_EXTENSION_ID`: 扩展 ID（如 `chatgpt-analytics@devcxl.cn` 或 AMO 分配的 UUID）
+- `AMO_JWT_ISSUER`: Mozilla AMO API 密钥 Issuer
+- `AMO_JWT_SECRET`: Mozilla AMO API 密钥 Secret
+
+#### Chrome Web Store 发布凭证（可选）
+- `CHROME_EXTENSION_ID`: Chrome 扩展 ID
+- `CHROME_PUBLISHER_ID`: 发布者 UUID（v2 API 路径 `publishers/{id}/items/{id}` 必需）
+- `CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL`: GCP 服务账号邮箱，需在 CWS 开发者后台绑定
+- `CHROME_SERVICE_ACCOUNT_PRIVATE_KEY`: 服务账号私钥，必须是带真实换行的 PEM（`jq -r .private_key key.json`）
+
+v2 凭证的获取步骤见 [`chatgpt-markdown-exporter` AGENTS.md](https://github.com/devcxl/chatgpt-markdown-exporter/blob/master/AGENTS.md#chrome-web-store-自动发布配置)。
 
 ## 环境说明
 
