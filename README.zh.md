@@ -144,7 +144,7 @@ npm run zip:firefox
 
 1. **CI (`ci.yml`)**：在推送到 `main` 或提交针对 `main` 的 PR 时执行代码检查（Lint）、类型检查（Type check）、Chrome 与 Firefox 构建以及 Manifest 规范校验。
 2. **构建草稿发布 (`release.yml`)**：推送 `v*` 标签或手动触发时，自动构建 Chrome/Firefox MV3 扩展包及源码包，并创建 GitHub Draft Release。
-3. **自动发布至应用商店 (`publish-stores.yml`)**：仅在人工把 Draft Release 正式发布（Published，且非 prerelease）时触发，将打包产物上传到已配置密钥的应用商店：Chrome Web Store 走 `publish-extension`，Firefox AMO 走 `wxt submit`。
+3. **自动发布至应用商店 (`publish-stores.yml`)**：仅在人工把 Draft Release 正式发布（Published，且非 prerelease）时触发，统一通过 `wxt submit` 将打包产物上传到已配置密钥的应用商店（Chrome Web Store / Firefox AMO）。
 
 ### 自动化发布流程
 

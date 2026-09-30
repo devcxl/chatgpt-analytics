@@ -144,7 +144,7 @@ The actual archive name includes the version from `package.json`.
 
 1. **CI (`ci.yml`)**: Runs Lint, Type check, Chrome/Firefox builds, and Manifest validation on pushes and PRs to `main`.
 2. **Build Draft Release (`release.yml`)**: Automatically packages Chrome and Firefox MV3 archives plus source code archives, and creates a GitHub Draft Release upon pushing a `v*` tag or manual dispatch.
-3. **Publish Extension Stores (`publish-stores.yml`)**: Triggered only when a Draft Release is manually published (and only for non-prerelease tags), uploading archives to the configured stores: Chrome Web Store via `publish-extension`, Firefox AMO via `wxt submit`.
+3. **Publish Extension Stores (`publish-stores.yml`)**: Triggered only when a Draft Release is manually published (and only for non-prerelease tags), uploading archives to the configured stores (Chrome Web Store / Firefox AMO) via `wxt submit`.
 
 ### Publishing process
 

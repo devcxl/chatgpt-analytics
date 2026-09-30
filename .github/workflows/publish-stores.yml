@@ -97,7 +97,7 @@ jobs:
       - name: Submit to Chrome Web Store
         if: ${{ steps.stores.outputs.chrome == 'true' }}
         env:
-          # 凭证走环境变量传给 publish-extension，避免私钥出现在命令行参数里。
+          # 凭证走环境变量下发（wxt submit 会原样转发给 publish-extension），避免私钥出现在命令行参数里。
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
           CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
@@ -114,9 +114,9 @@ jobs:
 
           # Chrome Web Store API v1.1 已于 2026-10-15 停用，这里固定走 v2：
           # 认证用 GCP 服务账号（需在开发者后台绑定，每个发布者仅限一个）。
-          # 版本由 npx 显式指定：本 workflow 检出的是发布 tag，tag 内的 node_modules
-          # 不一定装了这个 CLI，或装的版本与仓库当前锁定值不同，不能依赖本地 bin 解析。
-          npx --yes 'publish-browser-extension@^6.1.0' \
+          # 两个商店统一走 `wxt submit`（它是 publish-extension 的透传别名，
+          # 未知参数会原样转发），CLI 版本由 package.json 的 devDependency 锁定。
+          npx wxt submit \
             --chrome-zip "${{ steps.stores.outputs.chrome_zip }}" \
             --chrome-api-version v2 \
             --chrome-skip-submit-review
