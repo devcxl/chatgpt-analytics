@@ -24,6 +24,23 @@ jobs:
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     steps:
+      # 已发布的 Release 不再允许重建：action-gh-release 会把同名 Release 更新回草稿，
+      # 一旦有人再次 Publish，publish-stores.yml 就会向商店重复提交同一份产物。
+      - name: Refuse to rebuild a published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! drafts="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq '.[] | select(.tag_name == $ENV.RELEASE_TAG) | .draft' 2>&1)"; then
+            echo "::error::Unable to query releases for $GITHUB_REPOSITORY: $drafts"
+            exit 1
+          fi
+          if [[ "$drafts" == *false* ]]; then
+            echo "::error::Release $RELEASE_TAG is already published. Delete it (or convert it back to a draft) before rebuilding."
+            exit 1
+          fi
+          echo "Release $RELEASE_TAG has no published release, continuing"
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
