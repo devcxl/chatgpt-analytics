@@ -27,6 +27,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up Node.js
@@ -50,11 +51,20 @@ jobs:
       - name: Check tag version
         shell: bash
         run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Invalid release tag format: $RELEASE_TAG"
+            exit 1
+          fi
           package_version="$(node -p "require('./package.json').version")"
           tag_version="${RELEASE_TAG#v}"
           if [[ "$tag_version" != "$package_version" ]]; then
             echo "::error::Tag $RELEASE_TAG does not match package.json version $package_version"
             exit 1
+          fi
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            echo "IS_PRERELEASE=true" >> "$GITHUB_ENV"
+          else
+            echo "IS_PRERELEASE=false" >> "$GITHUB_ENV"
           fi
 
       - name: Build & package Chrome
@@ -77,9 +87,6 @@ jobs:
             echo "::error::Expected exactly one Chrome ZIP, one Firefox ZIP, and one source ZIP"
             exit 1
           fi
-          echo "chrome=${CHROME_ZIPS[0]}" >> "$GITHUB_OUTPUT"
-          echo "firefox=${FIREFOX_ZIPS[0]}" >> "$GITHUB_OUTPUT"
-          echo "sources=${SOURCE_ZIPS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Generate release notes
         id: notes
@@ -108,6 +115,7 @@ jobs:
           name: ${{ env.RELEASE_TAG }}
           body: ${{ steps.notes.outputs.notes }}
           draft: true
+          prerelease: ${{ env.IS_PRERELEASE == 'true' }}
           fail_on_unmatched_files: true
           overwrite_files: true
           files: |
