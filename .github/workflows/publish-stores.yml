@@ -1,24 +1,29 @@
 name: Publish Extension Stores
 
-# 唯一的触发点是人工点击 Publish release：打 tag 只会生成 draft release（release.yml），
-# 草稿不会触发本 workflow；提前发布的 prerelease 会被下面的 job 条件拦下。
+# 触发点：人工点击 Publish release，或通过 workflow_dispatch 手动指定 tag 重试发布
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to submit to stores (e.g. v1.0.2)
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: publish-stores-${{ github.event.release.tag_name }}
+  group: publish-stores-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
   submit:
-    if: github.event.release.prerelease == false
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,8 +54,8 @@ jobs:
           CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
           CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
-          FIREFOX_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          FIREFOX_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER || secrets.AMO_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET || secrets.AMO_JWT_SECRET }}
         run: |
           shopt -s nullglob
           CHROME_ZIPS=(release-assets/*-chrome.zip)
@@ -125,8 +130,8 @@ jobs:
         if: ${{ steps.stores.outputs.firefox == 'true' }}
         env:
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
-          FIREFOX_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          FIREFOX_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER || secrets.AMO_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET || secrets.AMO_JWT_SECRET }}
         run: |
           npx wxt submit \
             --firefox-zip "${{ steps.stores.outputs.firefox_zip }}" \

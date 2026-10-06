@@ -168,8 +168,8 @@ git push origin main v1.0.1
 
 #### Firefox Add-ons (AMO) 发布凭证
 - `FIREFOX_EXTENSION_ID`: 扩展 ID（如 `chatgpt-analytics@devcxl.cn` 或 AMO 分配的 UUID）
-- `AMO_JWT_ISSUER`: Mozilla AMO API 密钥 Issuer
-- `AMO_JWT_SECRET`: Mozilla AMO API 密钥 Secret
+- `FIREFOX_JWT_ISSUER`: Mozilla AMO API 密钥 Issuer（兼容 `AMO_JWT_ISSUER`）
+- `FIREFOX_JWT_SECRET`: Mozilla AMO API 密钥 Secret（兼容 `AMO_JWT_SECRET`）
 
 #### Chrome Web Store 发布凭证（可选）
 - `CHROME_EXTENSION_ID`: Chrome 扩展 ID

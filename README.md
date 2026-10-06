@@ -168,8 +168,8 @@ Configure the following secrets under **Settings -> Secrets and variables -> Act
 
 #### Firefox Add-ons (AMO) credentials
 - `FIREFOX_EXTENSION_ID`: Extension ID (e.g. `chatgpt-analytics@devcxl.cn` or AMO UUID)
-- `AMO_JWT_ISSUER`: Mozilla AMO API key Issuer
-- `AMO_JWT_SECRET`: Mozilla AMO API key Secret
+- `FIREFOX_JWT_ISSUER`: Mozilla AMO API key Issuer (also accepts `AMO_JWT_ISSUER`)
+- `FIREFOX_JWT_SECRET`: Mozilla AMO API key Secret (also accepts `AMO_JWT_SECRET`)
 
 #### Chrome Web Store credentials (Optional)
 - `CHROME_EXTENSION_ID`: Chrome Extension ID
