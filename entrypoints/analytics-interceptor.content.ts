@@ -22,7 +22,11 @@ function resolveRequestTarget(input: RequestInfo | URL): RequestTarget | null {
       : input.url;
   const url = new URL(rawUrl, window.location.href);
 
-  if (url.origin !== window.location.origin || url.pathname !== ANALYTICS_API_PATH) {
+  const pathname = url.pathname.replace(/\/$/, '');
+  if (
+    url.origin !== window.location.origin
+    || (pathname !== ANALYTICS_API_PATH && !pathname.endsWith('/wham/analytics/daily-workspace-usage-counts'))
+  ) {
     return null;
   }
 
@@ -125,7 +129,11 @@ function installXhrInterceptor(): void {
 }
 
 export default defineContentScript({
-  matches: ['https://chatgpt.com/codex/cloud/settings/analytics*'],
+  matches: [
+    'https://chatgpt.com/settings/usage*',
+    'https://chatgpt.com/codex/cloud/settings/analytics*',
+    'https://chatgpt.com/*',
+  ],
   runAt: 'document_start',
   world: 'MAIN',
   main() {

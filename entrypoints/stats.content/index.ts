@@ -3,17 +3,22 @@ import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import App from './App.vue';
 
-const ANALYTICS_ANCHOR_SELECTOR = 'div.pb-8:nth-child(2)';
+// 优先匹配新版 OpenAI Analytics 标签页卡片容器，同时兼容回退选择器与旧版路径
+const ANALYTICS_ANCHOR_SELECTOR = 'div[class*="gap-[22px]"], div:not([hidden]) > div.flex.flex-col > div.flex.w-full.flex-col, div.pb-8:nth-child(2)';
 
 export default defineContentScript({
-  matches: ['https://chatgpt.com/codex/cloud/settings/analytics*'],
+  matches: [
+    'https://chatgpt.com/settings/usage*',
+    'https://chatgpt.com/codex/cloud/settings/analytics*',
+    'https://chatgpt.com/*',
+  ],
   cssInjectionMode: 'ui',
   async main(ctx) {
     const ui = await createShadowRootUi(ctx, {
       name: 'chatgpt-analytics',
       position: 'inline',
       anchor: ANALYTICS_ANCHOR_SELECTOR,
-      append: 'after',
+      append: 'last',
       isolateEvents: true,
       onMount: (uiContainer, _shadow, shadowHost) => {
         shadowHost.style.display = 'block';
@@ -23,15 +28,14 @@ export default defineContentScript({
         mount.id = 'chatgpt-analytics-mount';
         uiContainer.append(mount);
 
-        // 官方页面重新渲染会移除注入节点；只要 anchor 仍在，就把它插回原位。
-        // WXT 只在 anchor 存在时挂载，因此这里不再重复判空报错。
-        const anchor = document.querySelector(ANALYTICS_ANCHOR_SELECTOR);
+        // 官方页面异步重新渲染时，保证增强卡片始终插入在容器末尾
+        const container = shadowHost.parentElement ?? document.querySelector(ANALYTICS_ANCHOR_SELECTOR);
         const observer = new MutationObserver(() => {
-          if (anchor?.isConnected && anchor.nextElementSibling !== shadowHost) {
-            anchor.parentElement?.insertBefore(shadowHost, anchor.nextElementSibling);
+          if (container?.isConnected && container.lastElementChild !== shadowHost) {
+            container.append(shadowHost);
           }
         });
-        if (anchor?.parentElement) observer.observe(anchor.parentElement, { childList: true });
+        if (container) observer.observe(container, { childList: true });
 
         const app = createApp(App);
         app.mount(mount);

@@ -25,7 +25,7 @@
 
 ## 功能
 
-打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) 页面时，插件会在官方统计图表下方追加增强内容：
+打开 [ChatGPT Codex Analytics](https://chatgpt.com/settings/usage?tab=analytics) 页面时，插件会在官方统计图表下方追加增强内容：
 
 | 图表 | 内容 |
 | --- | --- |
@@ -91,7 +91,7 @@ chatgpt-analytics/
 
 安装完成后：
 
-1. 在已登录的 ChatGPT 账号中打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics)。
+1. 在已登录的 ChatGPT 账号中打开 [ChatGPT Codex Analytics](https://chatgpt.com/settings/usage?tab=analytics)。
 2. 滚动到官方统计图表下方查看增强面板。
 
 ## 开发
@@ -115,7 +115,7 @@ npm run build
 2. 打开 `chrome://extensions/`。
 3. 开启右上角「开发者模式」。
 4. 点击「加载已解压的扩展程序」，选择 `.output/chrome-mv3`。
-5. 打开 [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics)，在官方图表下方查看增强内容。
+5. 打开 [ChatGPT Codex Analytics](https://chatgpt.com/settings/usage?tab=analytics)，在官方图表下方查看增强内容。
 
 如果想直接加载打包文件而不是未打包目录，可将 `.output/chatgpt-analytics-*.zip` 拖拽到 `chrome://extensions/` 页面。
 

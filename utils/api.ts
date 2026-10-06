@@ -12,7 +12,7 @@ import type {
   UsageTotals,
 } from './types';
 
-export const CHATGPT_STATS_URL = 'https://chatgpt.com/codex/cloud/settings/analytics#chatgpt-analytics';
+export const CHATGPT_STATS_URL = 'https://chatgpt.com/settings/usage?tab=analytics#chatgpt-analytics';
 
 type JsonObject = Record<string, unknown>;
 

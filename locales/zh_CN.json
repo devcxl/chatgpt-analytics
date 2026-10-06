@@ -25,6 +25,12 @@
   "close": {
     "message": "关闭"
   },
+  "expand": {
+    "message": "展开"
+  },
+  "collapse": {
+    "message": "收起"
+  },
   "waitingData": {
     "message": "等待官方统计数据"
   },

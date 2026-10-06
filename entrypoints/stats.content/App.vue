@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { ChartNoAxesColumn, X } from '@lucide/vue';
+import { ChartNoAxesColumn, ChevronDown, ChevronUp, Loader2 } from '@lucide/vue';
 import * as echarts from 'echarts/core';
 import type { ECharts, EChartsCoreOption as EChartsOption } from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
@@ -27,7 +27,7 @@ import {
   buildDistributionChart,
   buildTokenChart,
 } from './chart-options';
-import { theme } from './theme';
+import { getThemeTokens } from './theme';
 
 const t = i18n.t;
 
@@ -74,6 +74,11 @@ const modelChartEl = ref<HTMLElement | null>(null);
 const clientChartEl = ref<HTMLElement | null>(null);
 const chartInstances: ECharts[] = [];
 let unsubscribePageAnalytics: (() => void) | undefined;
+let themeObserver: MutationObserver | undefined;
+let mediaQuery: MediaQueryList | undefined;
+let resizeObserver: ResizeObserver | undefined;
+let intersectionObserver: IntersectionObserver | undefined;
+let resizeTimer: number | undefined;
 
 function disposeCharts() {
   while (chartInstances.length) chartInstances.pop()?.dispose();
@@ -81,7 +86,13 @@ function disposeCharts() {
 
 function renderCharts() {
   const data = state.data;
-  if (!data) return;
+  if (!data || !state.open) return;
+
+  const firstEl = tokenChartEl.value;
+  if (!firstEl || firstEl.clientWidth === 0) {
+    // 容器尚未获得有效宽度（例如处于隐藏 Tab 或布局未完成），等待尺寸就绪
+    return;
+  }
 
   const targets: Array<[HTMLElement | null, EChartsOption]> = [
     [tokenChartEl.value, buildTokenChart(data.tokens, state.groupBy)],
@@ -94,10 +105,41 @@ function renderCharts() {
 
   disposeCharts();
   for (const [element, option] of targets) {
-    const chart = echarts.init(element as HTMLElement, undefined, { renderer: 'canvas' });
+    if (!element) continue;
+    const chart = echarts.init(element, undefined, { renderer: 'canvas' });
     chart.setOption(option);
     chartInstances.push(chart);
   }
+}
+
+function scheduleResize() {
+  if (resizeTimer) cancelAnimationFrame(resizeTimer);
+  resizeTimer = requestAnimationFrame(() => {
+    resizeTimer = undefined;
+    if (!state.open || !state.data) return;
+
+    const firstEl = tokenChartEl.value;
+    if (!firstEl || firstEl.clientWidth === 0) {
+      setTimeout(() => {
+        if (state.open && state.data && (tokenChartEl.value?.clientWidth ?? 0) > 0) {
+          scheduleResize();
+        }
+      }, 60);
+      return;
+    }
+
+    if (chartInstances.length === 0) {
+      renderCharts();
+    } else {
+      chartInstances.forEach((chart) => {
+        try {
+          chart.resize();
+        } catch {
+          // ignore
+        }
+      });
+    }
+  });
 }
 
 function applyAnalytics(response: AnalyticsResponse) {
@@ -132,224 +174,492 @@ watch(
   [() => state.data, () => state.open],
   async ([, open]) => {
     await nextTick();
-    if (open) renderCharts();
-    else disposeCharts();
+    if (open) {
+      scheduleResize();
+    } else {
+      disposeCharts();
+    }
   },
   { flush: 'post' },
 );
 
-function handleResize() {
-  chartInstances.forEach((chart) => chart.resize());
-}
-
-onMounted(() => {
+function applyThemeVariables() {
+  const tokens = getThemeTokens();
   Object.entries({
-    '--bg': theme.bg,
-    '--bg-card': theme.bgCard,
-    '--border': theme.border,
-    '--text': theme.text,
-    '--subtext': theme.subtext,
-    '--accent': theme.accent,
+    '--bg': tokens.bg,
+    '--bg-card': tokens.bgCard,
+    '--bg-secondary': tokens.bgSecondary,
+    '--border': tokens.border,
+    '--border-subtle': tokens.borderSubtle,
+    '--text': tokens.text,
+    '--subtext': tokens.subtext,
+    '--hover': tokens.hover,
+    '--accent': tokens.accent,
     '--chart-height': `${CONFIG.chartHeight}px`,
   }).forEach(([name, value]) => hostEl.value?.style.setProperty(name, value));
 
+  if (state.open && state.data) {
+    scheduleResize();
+  }
+}
+
+onMounted(() => {
+  applyThemeVariables();
+
   if (window.location.hash === '#chatgpt-analytics') state.open = true;
-  window.addEventListener('resize', handleResize);
+  window.addEventListener('resize', scheduleResize);
+  document.addEventListener('visibilitychange', scheduleResize);
   unsubscribePageAnalytics = subscribeToPageAnalytics(applyAnalytics, handleAnalyticsError);
+
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          scheduleResize();
+          break;
+        }
+      }
+    });
+    if (hostEl.value) resizeObserver.observe(hostEl.value);
+    if (tokenChartEl.value) resizeObserver.observe(tokenChartEl.value);
+  }
+
+  if (typeof IntersectionObserver !== 'undefined' && hostEl.value) {
+    intersectionObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          scheduleResize();
+          break;
+        }
+      }
+    }, { threshold: 0.05 });
+    intersectionObserver.observe(hostEl.value);
+  }
+
+  themeObserver = new MutationObserver(() => applyThemeVariables());
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'class'],
+  });
+
+  mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+  mediaQuery?.addEventListener('change', applyThemeVariables);
 });
 
 onBeforeUnmount(() => {
+  if (resizeTimer) cancelAnimationFrame(resizeTimer);
+  resizeTimer = undefined;
+  resizeObserver?.disconnect();
+  resizeObserver = undefined;
+  intersectionObserver?.disconnect();
+  intersectionObserver = undefined;
+  themeObserver?.disconnect();
+  themeObserver = undefined;
+  mediaQuery?.removeEventListener('change', applyThemeVariables);
+  mediaQuery = undefined;
+  window.removeEventListener('resize', scheduleResize);
+  document.removeEventListener('visibilitychange', scheduleResize);
   unsubscribePageAnalytics?.();
   unsubscribePageAnalytics = undefined;
-  window.removeEventListener('resize', handleResize);
   disposeCharts();
 });
 </script>
 
 <style>
 #chatgpt-analytics-host {
-  position: relative;
-  z-index: 2147483000 !important;
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   display: block;
   width: 100%;
-  user-select: none;
-  pointer-events: none;
+  color: var(--color-text, var(--text));
+  font-family: var(--font-ui-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+  user-select: text;
+  box-sizing: border-box;
 }
-#chatgpt-analytics-host * { box-sizing: border-box; }
-#chatgpt-analytics-host button,
-#chatgpt-analytics-host select,
-#chatgpt-analytics-host a { pointer-events: auto; }
-.gap-btn {
-  display: inline-flex;
-  position: relative;
-  align-items: center;
-  justify-content: center;
-  margin: 16px 0;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .28);
-  transition: transform .15s ease;
+
+#chatgpt-analytics-host * {
+  box-sizing: border-box;
 }
-.gap-btn:hover { transform: scale(1.08); }
-.gap-panel {
-  position: relative;
+
+.openai-card {
   width: 100%;
-  max-width: 100%;
-  margin: 24px 0;
+  border: 1px solid var(--color-border-subtle, var(--border));
+  border-radius: 16px;
+  background-color: var(--color-surface, var(--bg-card));
+  color: var(--color-text, var(--text));
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-card);
-  color: var(--text);
-  box-shadow: 0 10px 36px rgba(0, 0, 0, .38);
-  pointer-events: auto;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s ease;
 }
-.gap-head {
-  position: relative;
-  z-index: 1;
+
+.card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  padding: 14px 18px;
+  background-color: var(--color-surface, var(--bg-card));
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.card-header:hover {
+  background-color: var(--color-background-primary-ghost-hover, var(--hover));
+}
+
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary, var(--subtext));
+  flex: none;
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, var(--text));
+  white-space: nowrap;
+}
+
+.header-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary, var(--subtext));
+  padding: 1px 6px;
+  border-radius: 6px;
+  background-color: var(--color-surface-secondary, var(--bg-secondary));
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.header-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border-subtle, var(--border));
+  border-radius: 8px;
+  background-color: var(--color-surface, var(--bg));
+  color: var(--color-text, var(--text));
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.header-toggle-btn:hover {
+  background-color: var(--color-background-primary-ghost-hover, var(--hover));
+}
+
+.card-body {
+  padding: 0 18px 18px;
+  border-top: 1px solid var(--color-border-subtle, var(--border-subtle));
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.metric-card {
+  min-width: 0;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-card);
+  border: 1px solid var(--color-border-subtle, var(--border-subtle));
+  border-radius: 12px;
+  background-color: var(--color-surface-secondary, var(--bg-secondary));
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary, var(--subtext));
+}
+
+.metric-value {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text, var(--text));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-range {
+  font-size: 13px;
+  line-height: 24px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.chart-panel {
+  min-width: 0;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-subtle, var(--border-subtle));
+  border-radius: 12px;
+  background-color: var(--color-surface, var(--bg));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.chart-panel.full-width {
+  grid-column: 1 / -1;
+}
+
+.chart-title {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, var(--subtext));
+}
+
+.chart-canvas {
+  width: 100%;
+  min-width: 0;
+  height: var(--chart-height, 260px);
+  display: block;
+  position: relative;
+}
+
+.table-section {
+  margin-top: 16px;
+}
+
+.table-heading {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text, var(--text));
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--color-border-subtle, var(--border-subtle));
+  border-radius: 12px;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  background-color: var(--color-surface, var(--bg));
+  color: var(--color-text, var(--text));
+  font-size: 12px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-subtle, var(--border-subtle));
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th:first-child,
+.data-table td:first-child {
+  text-align: left;
+}
+
+.data-table thead th {
+  background-color: var(--color-surface-secondary, var(--bg-secondary));
+  color: var(--color-text-secondary, var(--subtext));
+  font-weight: 500;
+}
+
+.data-table tbody th {
+  font-weight: 500;
+}
+
+.data-table tbody tr:last-child th,
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table tbody tr:hover th,
+.data-table tbody tr:hover td {
+  background-color: var(--color-background-primary-ghost-hover, var(--hover));
+}
+
+.state-loading,
+.state-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 8px;
+  color: var(--color-text-secondary, var(--subtext));
   font-size: 13px;
 }
-.gap-head .title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
-.icon { display: block; flex: none; }
-.gap-actions { display: flex; align-items: center; gap: 6px; }
-.gap-head button,
-.gap-close {
-  border: 1px solid var(--border);
+
+.loading-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.state-error {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
   border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.gap-head button { padding: 5px 8px; }
-.gap-head button { display: inline-flex; align-items: center; gap: 4px; }
-.gap-close { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; padding: 0; }
-.gap-body { padding: 12px 14px 16px; }
-.gap-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.gap-stat {
-  min-width: 0;
-  padding: 10px 11px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-}
-.gap-stat .k { color: var(--subtext); font-size: 11px; }
-.gap-stat .v { margin-top: 3px; color: var(--text); font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gap-stat.range { grid-column: 1 / -1; }
-.gap-chart {
-  min-width: 0;
-  padding: 9px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-}
-.gap-chart.wide { grid-column: 1 / -1; }
-.gap-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.gap-chart .k { margin-bottom: 4px; color: var(--subtext); font-size: 12px; }
-.gap-chart .el { width: 100%; height: var(--chart-height, 320px); }
-.gap-table { margin-top: 12px; }
-.gap-table-title { margin: 0 0 8px; color: var(--text); font-size: 13px; font-weight: 600; }
-.gap-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
-.gap-table table { width: 100%; min-width: 760px; border-collapse: collapse; background: var(--bg); color: var(--text); font-size: 12px; }
-.gap-table th, .gap-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
-.gap-table th:first-child, .gap-table td:first-child { text-align: left; }
-.gap-table thead th { color: var(--subtext); font-weight: 500; }
-.gap-table tbody th { font-weight: 500; }
-.gap-table tbody tr:last-child th, .gap-table tbody tr:last-child td { border-bottom: 0; }
-.gap-status { padding: 20px 4px; color: var(--subtext); font-size: 13px; text-align: center; }
-.gap-error {
-  padding: 12px;
-  border: 1px solid rgba(248, 86, 77, .35);
-  border-radius: 9px;
-  background: var(--bg);
-  color: #f8564d;
+  background-color: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-word;
 }
-@media (max-width: 520px) {
-  .gap-panel { width: 100%; margin: 16px 0; }
-  .gap-btn { margin: 10px 0; }
-  .gap-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .gap-charts { grid-template-columns: 1fr; }
-  .gap-chart.wide { grid-column: auto; }
-  .gap-chart .el { height: min(var(--chart-height, 320px), 260px); }
+
+@media (max-width: 900px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 580px) {
+  .card-header {
+    padding: 12px 14px;
+  }
+  .card-body {
+    padding: 0 14px 14px;
+  }
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .chart-panel.full-width {
+    grid-column: auto;
+  }
+  .chart-canvas {
+    height: min(var(--chart-height, 260px), 230px);
+  }
 }
 </style>
 
 <template>
   <div id="chatgpt-analytics-host" ref="hostEl">
-    <button
-      v-if="!state.open"
-      class="gap-btn"
-      type="button"
-      :title="t('viewStats')"
-      :aria-label="t('viewStats')"
-      @click="togglePanel"
-    >
-      <ChartNoAxesColumn class="icon" :size="20" :stroke-width="2" aria-hidden="true" />
-    </button>
-
-    <section v-else class="gap-panel" :aria-label="t('panelTitle')">
-      <header class="gap-head">
-        <span class="title">
-          <ChartNoAxesColumn class="icon" :size="16" :stroke-width="2" aria-hidden="true" />
-          <span>{{ t('panelTitle') }}</span>
-        </span>
-        <div class="gap-actions">
-          <button class="gap-close" type="button" :title="t('close')" :aria-label="t('close')" @click="togglePanel">
-            <X class="icon" :size="16" :stroke-width="2" aria-hidden="true" />
+    <section class="openai-card" :aria-label="t('panelTitle')">
+      <!-- Card Header: 契合 OpenAI 原版卡片头部风格 -->
+      <header class="card-header" @click="togglePanel">
+        <div class="header-main">
+          <span class="header-icon">
+            <ChartNoAxesColumn :size="16" :stroke-width="2" aria-hidden="true" />
+          </span>
+          <span class="header-title">{{ t('panelTitle') }}</span>
+          <span v-if="state.data && !state.loading" class="header-badge">
+            {{ state.groupBy }}
+          </span>
+        </div>
+        <div class="header-actions" @click.stop>
+          <button
+            class="header-toggle-btn"
+            type="button"
+            :title="state.open ? t('collapse') : t('expand')"
+            :aria-label="state.open ? t('collapse') : t('expand')"
+            @click="togglePanel"
+          >
+            <span>{{ state.open ? t('collapse') : t('expand') }}</span>
+            <component
+              :is="state.open ? ChevronUp : ChevronDown"
+              :size="14"
+              :stroke-width="2"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </header>
 
-      <div class="gap-body">
-        <div v-if="state.loading" class="gap-status">{{ t('waitingData') }}</div>
-        <div v-else-if="state.error" class="gap-error">{{ state.error }}</div>
+      <!-- Card Body -->
+      <div v-show="state.open" class="card-body">
+        <div v-if="state.loading" class="state-loading">
+          <Loader2 class="loading-spin" :size="18" :stroke-width="2" aria-hidden="true" />
+          <span>{{ t('waitingData') }}</span>
+        </div>
+        <div v-else-if="state.error" class="state-error">{{ state.error }}</div>
         <template v-else-if="state.data">
-          <div class="gap-summary">
-            <div class="gap-stat"><div class="k">{{ t('activeUserDays') }}</div><div class="v">{{ state.data.summary.users }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('turnCount') }}</div><div class="v">{{ state.data.summary.turns }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('activeThreadCount') }}</div><div class="v">{{ state.data.summary.threads }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('credits') }}</div><div class="v">{{ state.data.summary.credits }}</div></div>
-            <div class="gap-stat"><div class="k">{{ t('totalTokens') }}</div><div class="v">{{ state.data.summary.totalTokens }}</div></div>
-            <div class="gap-stat range"><div class="k">{{ t('dateRange') }}</div><div class="v">{{ state.data.summary.range }}</div></div>
+          <!-- Summary Metrics Cards -->
+          <div class="summary-grid">
+            <div class="metric-card">
+              <div class="metric-label">{{ t('activeUserDays') }}</div>
+              <div class="metric-value">{{ state.data.summary.users }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">{{ t('turnCount') }}</div>
+              <div class="metric-value">{{ state.data.summary.turns }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">{{ t('activeThreadCount') }}</div>
+              <div class="metric-value">{{ state.data.summary.threads }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">{{ t('credits') }}</div>
+              <div class="metric-value">{{ state.data.summary.credits }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">{{ t('totalTokens') }}</div>
+              <div class="metric-value">{{ state.data.summary.totalTokens }}</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">{{ t('dateRange') }}</div>
+              <div class="metric-value metric-range">{{ state.data.summary.range }}</div>
+            </div>
           </div>
 
-          <div class="gap-charts">
-            <div class="gap-chart wide"><div class="k">{{ t('tokenTrend') }}</div><div ref="tokenChartEl" class="el"></div></div>
-            <div class="gap-chart wide"><div class="k">{{ t('creditsTrend') }}</div><div ref="creditsChartEl" class="el"></div></div>
-            <div class="gap-chart wide"><div class="k">{{ t('activity') }}</div><div ref="activityChartEl" class="el"></div></div>
-            <div class="gap-chart"><div class="k">{{ t('modelDistribution') }}</div><div ref="modelChartEl" class="el"></div></div>
-            <div class="gap-chart"><div class="k">{{ t('clientDistribution') }}</div><div ref="clientChartEl" class="el"></div></div>
+          <!-- Charts Area -->
+          <div class="charts-grid">
+            <div class="chart-panel full-width">
+              <div class="chart-title">{{ t('tokenTrend') }}</div>
+              <div ref="tokenChartEl" class="chart-canvas"></div>
+            </div>
+            <div class="chart-panel full-width">
+              <div class="chart-title">{{ t('creditsTrend') }}</div>
+              <div ref="creditsChartEl" class="chart-canvas"></div>
+            </div>
+            <div class="chart-panel full-width">
+              <div class="chart-title">{{ t('activity') }}</div>
+              <div ref="activityChartEl" class="chart-canvas"></div>
+            </div>
+            <div class="chart-panel">
+              <div class="chart-title">{{ t('modelDistribution') }}</div>
+              <div ref="modelChartEl" class="chart-canvas"></div>
+            </div>
+            <div class="chart-panel">
+              <div class="chart-title">{{ t('clientDistribution') }}</div>
+              <div ref="clientChartEl" class="chart-canvas"></div>
+            </div>
           </div>
 
-          <section class="gap-table" :aria-label="t('details')">
-            <h3 class="gap-table-title">{{ t('details') }}</h3>
-            <div class="gap-table-wrap">
-              <table>
+          <!-- Details Table -->
+          <section class="table-section" :aria-label="t('details')">
+            <h3 class="table-heading">{{ t('details') }}</h3>
+            <div class="table-wrapper">
+              <table class="data-table">
                 <thead>
                   <tr>
                     <th scope="col">{{ t('group') }}</th>
@@ -380,7 +690,7 @@ onBeforeUnmount(() => {
             </div>
           </section>
         </template>
-        <div v-else class="gap-status">{{ t('noData') }}</div>
+        <div v-else class="state-empty">{{ t('noData') }}</div>
       </div>
     </section>
   </div>

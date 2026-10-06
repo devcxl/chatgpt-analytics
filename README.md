@@ -25,7 +25,7 @@
 
 ## Features
 
-When you open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics), the extension appends enhanced content below the official analytics charts:
+When you open [ChatGPT Codex Analytics](https://chatgpt.com/settings/usage?tab=analytics), the extension appends enhanced content below the official analytics charts:
 
 | Chart | Contents |
 | --- | --- |
@@ -91,7 +91,7 @@ Install the published extension from the Chrome Web Store:
 
 After installation:
 
-1. Open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) while signed in to your account.
+1. Open [ChatGPT Codex Analytics](https://chatgpt.com/settings/usage?tab=analytics) while signed in to your account.
 2. Scroll below the official analytics charts to view the enhanced panel.
 
 ## Development
@@ -115,7 +115,7 @@ npm run build
 2. Open `chrome://extensions/`.
 3. Enable **Developer mode** in the top right.
 4. Click **Load unpacked** and select `.output/chrome-mv3`.
-5. Open [ChatGPT Codex Analytics](https://chatgpt.com/codex/cloud/settings/analytics) and view the enhanced content below the official charts.
+5. Open [ChatGPT Codex Analytics](https://chatgpt.com/settings/usage?tab=analytics) and view the enhanced content below the official charts.
 
 To load the packaged zip instead of the unpacked folder, drag `.output/chatgpt-analytics-*.zip` onto `chrome://extensions/`.
 

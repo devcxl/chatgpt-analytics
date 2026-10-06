@@ -1,11 +1,32 @@
-/** 面板配色：注入为 CSS 变量，同时供 ECharts 使用。 */
-const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
+/**
+ * 判断当前是否处于暗色模式：
+ * 优先依据 ChatGPT 页面根节点（<html>）上的 data-theme 与 class 属性，
+ * 其次降级为系统偏好设置。
+ */
+export function isDarkMode(): boolean {
+  if (typeof document === 'undefined') return false;
+  const root = document.documentElement;
+  const dataTheme = root.getAttribute('data-theme');
+  if (dataTheme === 'dark') return true;
+  if (dataTheme === 'light') return false;
+  if (root.classList.contains('dark')) return true;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+}
 
-export const theme = {
-  bg: dark ? '#1f1f1f' : '#ffffff',
-  bgCard: dark ? '#2f2f2f' : '#f7f7f8',
-  border: dark ? '#3f3f46' : '#e5e5e5',
-  text: dark ? '#d1d2d3' : '#1f1f21',
-  subtext: dark ? '#999999' : '#666666',
-  accent: '#8e8ea0',
-};
+export function getThemeTokens() {
+  const dark = isDarkMode();
+  return {
+    dark,
+    bg: dark ? '#212121' : '#ffffff',
+    bgCard: dark ? '#212121' : '#ffffff',
+    bgSecondary: dark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+    border: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+    borderSubtle: dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    text: dark ? '#ececec' : '#0d0d0d',
+    subtext: dark ? '#b4b4b4' : '#737373',
+    hover: dark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.04)',
+    accent: '#339cff',
+  };
+}
+
+export const theme = getThemeTokens();

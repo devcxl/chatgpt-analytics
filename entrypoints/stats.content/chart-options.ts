@@ -9,13 +9,34 @@ import type {
 } from '~/utils/charts';
 import { formatNumber, formatTokens, labelForGroup } from '~/utils/charts';
 import type { GroupBy } from '~/utils/types';
-import { theme } from './theme';
+import { getThemeTokens } from './theme';
 
 const t = i18n.t;
 
-const AXIS_TEXT = { color: theme.subtext };
-const AXIS_LINE = { lineStyle: { color: theme.border } };
-const SPLIT_LINE = { lineStyle: { color: theme.border } };
+function getAxisTheme() {
+  const currentTheme = getThemeTokens();
+  return {
+    axisText: { color: currentTheme.subtext },
+    axisLine: { lineStyle: { color: currentTheme.borderSubtle } },
+    splitLine: { lineStyle: { color: currentTheme.borderSubtle } },
+    textColor: currentTheme.text,
+    subtextColor: currentTheme.subtext,
+  };
+}
+
+function tooltipBase() {
+  const isDark = getThemeTokens().dark;
+  return {
+    backgroundColor: isDark ? 'rgba(33, 33, 33, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+    borderWidth: 1,
+    padding: [8, 12],
+    textStyle: {
+      color: isDark ? '#ececec' : '#0d0d0d',
+      fontSize: 12,
+    },
+  };
+}
 
 type AxisTooltipPoint = { axisValue?: string; seriesName?: string; value?: unknown };
 
@@ -26,44 +47,49 @@ function tooltipPoints(params: unknown): AxisTooltipPoint[] {
 
 /** 时间序列图共用的横轴，标签随聚合维度变化。 */
 function timeAxis(dates: string[], groupBy: GroupBy, boundaryGap: boolean) {
+  const { axisText, axisLine } = getAxisTheme();
   return {
     type: 'category',
     boundaryGap,
     data: dates.map((date) => labelForGroup(groupBy, date)),
-    axisLine: AXIS_LINE,
-    axisLabel: AXIS_TEXT,
+    axisLine,
+    axisLabel: axisText,
     axisTick: { show: false },
   };
 }
 
 /** 时间序列图共用的纵轴；token 轴需要按 K / M / B 缩写。 */
 function valueAxis(format?: (value: number) => string) {
+  const { axisText, splitLine } = getAxisTheme();
   return {
     type: 'value',
     axisLine: { show: false },
-    axisLabel: format ? { ...AXIS_TEXT, formatter: format } : AXIS_TEXT,
-    splitLine: SPLIT_LINE,
+    axisLabel: format ? { ...axisText, formatter: format } : axisText,
+    splitLine,
   };
 }
 
 function emptyChartOption(): EChartsOption {
+  const { subtextColor } = getAxisTheme();
   return {
     graphic: [{
       type: 'text',
       left: 'center',
       top: 'middle',
-      style: { text: t('noData'), fill: theme.subtext, fontSize: 13 },
+      style: { text: t('noData'), fill: subtextColor, fontSize: 13 },
     }],
   };
 }
 
 /** Token 消耗趋势：缓存输入、未缓存输入、输出与合计。 */
 export function buildTokenChart(series: TokenUsageSeries, groupBy: GroupBy): EChartsOption {
+  const { axisText } = getAxisTheme();
   return {
     color: [CHART_COLORS.blue, CHART_COLORS.gray, CHART_COLORS.red, CHART_COLORS.green],
-    legend: { top: 0, textStyle: AXIS_TEXT, itemWidth: 12, itemHeight: 12 },
-    grid: { left: 48, right: 16, top: 42, bottom: 26 },
+    legend: { top: 0, textStyle: axisText, itemWidth: 12, itemHeight: 12, itemGap: 16 },
+    grid: { left: 56, right: 20, top: 40, bottom: 24 },
     tooltip: {
+      ...tooltipBase(),
       trigger: 'axis',
       axisPointer: { type: 'cross' },
       confine: true,
@@ -85,11 +111,13 @@ export function buildTokenChart(series: TokenUsageSeries, groupBy: GroupBy): ECh
 
 /** 活跃度趋势：用户、线程与轮次。 */
 export function buildActivityChart(series: ActivitySeries, groupBy: GroupBy): EChartsOption {
+  const { axisText } = getAxisTheme();
   return {
-    color: [CHART_COLORS.orange, CHART_COLORS.blue, CHART_COLORS.gray],
-    legend: { top: 0, textStyle: AXIS_TEXT, itemWidth: 12, itemHeight: 12 },
-    grid: { left: 48, right: 16, top: 42, bottom: 26 },
+    color: [CHART_COLORS.orange, CHART_COLORS.blue, CHART_COLORS.green],
+    legend: { top: 0, textStyle: axisText, itemWidth: 12, itemHeight: 12, itemGap: 16 },
+    grid: { left: 56, right: 20, top: 40, bottom: 24 },
     tooltip: {
+      ...tooltipBase(),
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       confine: true,
@@ -101,9 +129,9 @@ export function buildActivityChart(series: ActivitySeries, groupBy: GroupBy): EC
     xAxis: timeAxis(series.date, groupBy, true),
     yAxis: valueAxis(),
     series: [
-      { name: t('users'), type: 'bar', barMaxWidth: 18, data: series.users },
-      { name: t('threads'), type: 'bar', barMaxWidth: 18, data: series.threads },
-      { name: t('turns'), type: 'bar', barMaxWidth: 18, data: series.turns },
+      { name: t('users'), type: 'bar', barMaxWidth: 16, data: series.users },
+      { name: t('threads'), type: 'bar', barMaxWidth: 16, data: series.threads },
+      { name: t('turns'), type: 'bar', barMaxWidth: 16, data: series.turns },
     ],
   };
 }
@@ -112,8 +140,9 @@ export function buildActivityChart(series: ActivitySeries, groupBy: GroupBy): EC
 export function buildCreditsChart(series: CreditsSeries, groupBy: GroupBy): EChartsOption {
   return {
     color: [CHART_COLORS.orange],
-    grid: { left: 48, right: 16, top: 20, bottom: 26 },
+    grid: { left: 56, right: 20, top: 16, bottom: 24 },
     tooltip: {
+      ...tooltipBase(),
       trigger: 'axis',
       confine: true,
       formatter: (params: unknown) => {
@@ -123,17 +152,19 @@ export function buildCreditsChart(series: CreditsSeries, groupBy: GroupBy): ECha
     },
     xAxis: timeAxis(series.date, groupBy, false),
     yAxis: valueAxis(),
-    series: [{ name: t('credits'), type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.25 }, data: series.credits }],
+    series: [{ name: t('credits'), type: 'line', smooth: true, showSymbol: false, areaStyle: { opacity: 0.22 }, data: series.credits }],
   };
 }
 
 /** 模型 / 客户端分布饼图；无数据时显示占位文案。 */
 export function buildDistributionChart(distribution: Distribution): EChartsOption {
   if (distribution.names.length === 0) return emptyChartOption();
+  const { textColor } = getAxisTheme();
 
   return {
     color: CHART_PALETTE,
     tooltip: {
+      ...tooltipBase(),
       trigger: 'item',
       formatter: (params: unknown) => {
         const point = params as { name: string; value: number; percent: number };
@@ -145,18 +176,18 @@ export function buildDistributionChart(distribution: Distribution): EChartsOptio
       right: 0,
       top: 'middle',
       width: 105,
-      textStyle: { color: theme.text },
+      textStyle: { color: textColor },
       itemWidth: 10,
       itemHeight: 10,
       type: 'scroll',
     },
     series: [{
       type: 'pie',
-      radius: ['42%', '68%'],
-      center: ['32%', '50%'],
+      radius: ['45%', '70%'],
+      center: ['34%', '50%'],
       avoidLabelOverlap: true,
       label: { show: false },
-      emphasis: { label: { show: true, color: theme.text, formatter: '{b}' } },
+      emphasis: { label: { show: true, color: textColor, formatter: '{b}' } },
       data: distribution.names.map((name, index) => ({ name, value: distribution.values[index] })),
     }],
   };

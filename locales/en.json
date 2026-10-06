@@ -25,6 +25,12 @@
   "close": {
     "message": "Close"
   },
+  "expand": {
+    "message": "Expand"
+  },
+  "collapse": {
+    "message": "Collapse"
+  },
   "waitingData": {
     "message": "Waiting for official analytics data"
   },
