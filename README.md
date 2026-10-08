@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/chatgpt-analytics/lpnbpllikegochooknfohankonnfikhd"><img src="https://img.shields.io/chrome-web-store/v/lpnbpllikegochooknfohankonnfikhd?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store" alt="Chrome Web Store version" /></a>
+  <a href="https://addons.mozilla.org/zh-CN/firefox/addon/chatgpt-analytics/">Firefox Add-ons</a>
   <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status" /></a>
   <a href="https://github.com/devcxl/chatgpt-analytics/blob/main/LICENSE"><img src="https://img.shields.io/github/license/devcxl/chatgpt-analytics" alt="MIT License" /></a>
 </p>
@@ -85,9 +86,10 @@ chatgpt-analytics/
 
 ## Installation
 
-Install the published extension from the Chrome Web Store:
+Install the published extension from a browser store:
 
 - [ChatGPT Analytics on the Chrome Web Store](https://chromewebstore.google.com/detail/chatgpt-analytics/lpnbpllikegochooknfohankonnfikhd)
+- [ChatGPT Analytics on Firefox Add-ons](https://addons.mozilla.org/zh-CN/firefox/addon/chatgpt-analytics/)
 
 After installation:
 
