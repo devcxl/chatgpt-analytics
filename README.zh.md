@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/chatgpt-analytics/lpnbpllikegochooknfohankonnfikhd"><img src="https://img.shields.io/chrome-web-store/v/lpnbpllikegochooknfohankonnfikhd?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store" alt="Chrome Web Store 版本" /></a>
-  <a href="https://addons.mozilla.org/zh-CN/firefox/addon/chatgpt-analytics/">Firefox 附加组件</a>
+  <a href="https://addons.mozilla.org/zh-CN/firefox/addon/chatgpt-analytics/"><img src="https://img.shields.io/amo/v/chatgpt-analytics?logo=firefox-browser&logoColor=white&label=Firefox%20Add-ons" alt="Firefox 附加组件版本" /></a>
   <a href="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml"><img src="https://github.com/devcxl/chatgpt-analytics/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI 状态" /></a>
   <a href="https://github.com/devcxl/chatgpt-analytics/blob/main/LICENSE"><img src="https://img.shields.io/github/license/devcxl/chatgpt-analytics" alt="MIT 许可证" /></a>
 </p>
